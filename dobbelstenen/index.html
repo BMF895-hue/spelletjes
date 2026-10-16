@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dobbelstenen</title>
+<meta name="theme-color" content="#1f4a3d" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#12291f" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Dobbelstenen">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<style>@font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/bricolage-grotesque-latin-500-normal.woff2") format("woff2")}@font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:800;font-display:swap;src:url("fonts/bricolage-grotesque-latin-800-normal.woff2") format("woff2")}</style>
+<style>
+  :root {
+    --table: #1f4a3d; --table-edge: #163629;
+    --die: #f3ead7; --die-shade: #d9ccb0; --ink: #2a1e14;
+    --text: #e9efe9; --muted: #a9bfb4; --accent: #e3b34c;
+    --size: 100px;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --table: #12291f; --table-edge: #0b1c15;
+      --die: #e6dcc6; --die-shade: #c4b697; --text: #dfe8e2; --muted: #8fa89b;
+    }
+  }
+  :root[data-theme="dark"] {
+    --table: #12291f; --table-edge: #0b1c15;
+    --die: #e6dcc6; --die-shade: #c4b697; --text: #dfe8e2; --muted: #8fa89b;
+  }
+  @media (max-width: 380px) { :root { --size: 84px; } }
+  *, *::before, *::after { box-sizing: inherit; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: radial-gradient(ellipse at 50% 40%, var(--table) 0%, var(--table-edge) 100%);
+    background-color: var(--table);
+    color: var(--text);
+    font-family: "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", sans-serif;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2rem; padding: 1.5rem; overflow: hidden;
+  }
+  .tray {
+    display: flex; gap: clamp(2.5rem, 12vw, 5rem);
+    padding-top: 140px; /* room for the dice to fly up */
+    perspective: 900px;
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  .slot { position: relative; width: var(--size); height: var(--size); }
+  .shadow {
+    position: absolute; left: 10%; right: 10%; bottom: -14px; height: 16px;
+    border-radius: 50%; background: rgba(0,0,0,.35); filter: blur(6px);
+  }
+  .scene { width: 100%; height: 100%; transform-style: preserve-3d; }
+  .cube { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; }
+  .face {
+    position: absolute; inset: 0;
+    background: var(--die); border-radius: 18%;
+    display: grid; place-items: center;
+    font-weight: 800; font-size: calc(var(--size) * .58); line-height: 1; color: var(--ink);
+    box-shadow: inset 0 0 0 2px var(--die-shade), inset 0 -8px 16px rgba(0,0,0,.08);
+    backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  }
+  .f-a { transform: rotateY(0deg)   translateZ(calc(var(--size) / 2)); }
+  .f-f { transform: rotateY(180deg) translateZ(calc(var(--size) / 2)); }
+  .f-b { transform: rotateY(90deg)  translateZ(calc(var(--size) / 2)); }
+  .f-e { transform: rotateY(-90deg) translateZ(calc(var(--size) / 2)); }
+  .f-c { transform: rotateX(90deg)  translateZ(calc(var(--size) / 2)); }
+  .f-d { transform: rotateX(-90deg) translateZ(calc(var(--size) / 2)); }
+
+  .result {
+    font-size: clamp(2.5rem, 12vw, 4rem); font-weight: 800; letter-spacing: .05em;
+    min-height: 1.2em; color: var(--accent); text-align: center;
+  }
+  button {
+    font: inherit; font-weight: 800; font-size: 1.15rem;
+    padding: .9rem 2.6rem; border: 0; border-radius: 999px;
+    background: var(--accent); color: var(--ink); cursor: pointer;
+    box-shadow: 0 4px 0 #a97f26; transition: transform .08s, box-shadow .08s;
+  }
+  button:active { transform: translateY(3px); box-shadow: 0 1px 0 #a97f26; }
+  button:focus-visible, .tray:focus-visible { outline: 3px solid var(--text); outline-offset: 6px; }
+  button:disabled { opacity: .7; cursor: default; }
+  .options { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; justify-content: center; }
+  .seg {
+    display: inline-flex; border-radius: 999px; padding: 3px;
+    background: rgba(0,0,0,.25); border: 0; margin: 0;
+  }
+  .seg legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg label {
+    padding: .45rem 1rem; border-radius: 999px; cursor: pointer;
+    font-weight: 500; color: var(--muted); font-size: .95rem;
+  }
+  .seg input:checked + label { background: var(--die); color: var(--ink); font-weight: 800; }
+  .seg input:focus-visible + label { outline: 2px solid var(--text); outline-offset: 2px; }
+  .slot[hidden] { display: none; }
+  .history {
+    font-weight: 500; color: var(--muted); font-size: .95rem;
+    text-align: center; max-width: 22rem; line-height: 1.5; min-height: 3em;
+  }
+</style>
+</head>
+<body>
+  <div class="options">
+    <fieldset class="seg">
+      <legend>Aantal dobbelstenen</legend>
+      <input type="radio" name="count" id="c1" value="1"><label for="c1">1 steen</label>
+      <input type="radio" name="count" id="c2" value="2" checked><label for="c2">2 stenen</label>
+    </fieldset>
+    <fieldset class="seg">
+      <legend>Letters of cijfers</legend>
+      <input type="radio" name="mode" id="mL" value="letters" checked><label for="mL">A–F</label>
+      <input type="radio" name="mode" id="mN" value="numbers"><label for="mN">1–6</label>
+    </fieldset>
+  </div>
+
+  <div class="tray" id="tray" tabindex="0" role="button" aria-label="Gooi de dobbelstenen">
+    <div class="slot"><div class="shadow"></div><div class="scene"><div class="cube">
+      
+    </div></div></div>
+    <div class="slot"><div class="shadow"></div><div class="scene"><div class="cube">
+      
+    </div></div></div>
+  </div>
+
+  <div class="result" id="result" aria-live="polite">&nbsp;</div>
+  <button id="roll">Gooien</button>
+  <div class="history" id="history">Tik op de knop of op de dobbelstenen.</div>
+
+<script>
+  // Cube rotation [X, Y] that brings each letter to the front
+  const TARGET = { A:[0,0], B:[0,-90], C:[-90,0], D:[90,0], E:[0,90], F:[0,180] };
+  const SETS = { letters: ["A","B","C","D","E","F"], numbers: ["1","2","3","4","5","6"] };
+  const FACE_CLASS = ["f-a","f-b","f-c","f-d","f-e","f-f"];
+  const POS = ["A","B","C","D","E","F"]; // cube positions; opposite faces: A–F, B–E, C–D (= 1–6, 2–5, 3–4)
+  let mode = "letters", count = 2;
+  const DURATION = 1600;
+
+  const dice = [...document.querySelectorAll(".slot")].map(slot => ({
+    slot,
+    scene: slot.querySelector(".scene"),
+    cube: slot.querySelector(".cube"),
+    shadow: slot.querySelector(".shadow"),
+    x: 0, y: 0
+  }));
+  const resultEl = document.getElementById("result");
+  const historyEl = document.getElementById("history");
+  const btn = document.getElementById("roll");
+  const tray = document.getElementById("tray");
+  const history = [];
+  let busy = false;
+
+  function renderFaces() {
+    dice.forEach(d => {
+      d.cube.innerHTML = SETS[mode].map((sym, i) =>
+        `<div class="face ${FACE_CLASS[i]}">${sym}</div>`).join("");
+    });
+  }
+  function applyCount() {
+    dice[1].slot.hidden = count === 1;
+    tray.setAttribute("aria-label", count === 1 ? "Gooi de dobbelsteen" : "Gooi de dobbelstenen");
+  }
+  function resetResults() {
+    history.length = 0;
+    resultEl.innerHTML = "&nbsp;";
+    historyEl.textContent = "Tik op de knop of op de dobbelstenen.";
+  }
+  document.querySelectorAll('input[name="count"]').forEach(r => r.addEventListener("change", () => {
+    count = Number(r.value); applyCount(); resetResults();
+  }));
+  document.querySelectorAll('input[name="mode"]').forEach(r => r.addEventListener("change", () => {
+    mode = r.value; renderFaces(); resetResults();
+  }));
+
+  // Fair random integer 0..5 (no modulo bias)
+  function rand6() {
+    const b = new Uint8Array(1);
+    do { crypto.getRandomValues(b); } while (b[0] >= 252);
+    return b[0] % 6;
+  }
+  const rot = (x, y, z) => `rotateX(${x}deg) rotateY(${y}deg) rotateZ(${z}deg)`;
+
+  function throwDie(d, pos, idx) {
+    const [tx, ty] = TARGET[pos];
+    // Several full turns on each axis, then land on the target letter
+    const x1 = Math.ceil(d.x / 360) * 360 + (3 + rand6() % 2) * 360 + tx;
+    const y1 = Math.ceil(d.y / 360) * 360 + (2 + rand6() % 2) * 360 + ty;
+    const zTurns = (idx === 0 ? 1 : -1) * 360 * (1 + rand6() % 2);
+
+    // Tumble: fast at first, slowing down as it lands
+    const tumble = d.cube.animate([
+      { transform: rot(d.x, d.y, 0) },
+      { transform: rot(x1, y1, zTurns) }
+    ], { duration: DURATION, easing: "cubic-bezier(.15,.6,.3,1)", fill: "forwards" });
+
+    // Flight: thrown up, lands, bounces twice
+    const side = (idx === 0 ? -1 : 1) * (20 + rand6() * 4);
+    d.scene.animate([
+      { transform: "translate(0,0)", offset: 0 },
+      { transform: `translate(${side}px,-140px)`, offset: .22, easing: "ease-in" },
+      { transform: `translate(${side * .4}px,0)`, offset: .48, easing: "ease-out" },
+      { transform: `translate(${side * .2}px,-38px)`, offset: .62, easing: "ease-in" },
+      { transform: "translate(0,0)", offset: .76, easing: "ease-out" },
+      { transform: "translate(0,-10px)", offset: .85, easing: "ease-in" },
+      { transform: "translate(0,0)", offset: 1 }
+    ], { duration: DURATION });
+
+    // Shadow shrinks while the die is in the air
+    d.shadow.animate([
+      { transform: "scale(1)", opacity: 1, offset: 0 },
+      { transform: "scale(.45)", opacity: .35, offset: .22 },
+      { transform: "scale(1)", opacity: 1, offset: .48 },
+      { transform: "scale(.8)", opacity: .75, offset: .62 },
+      { transform: "scale(1)", opacity: 1, offset: .76 },
+      { transform: "scale(1)", opacity: 1, offset: 1 }
+    ], { duration: DURATION });
+
+    d.x = x1; d.y = y1;
+    tumble.onfinish = () => {
+      // Keep final position (z is a whole number of turns, so 0 looks identical)
+      d.cube.style.transform = rot(x1, y1, 0);
+      tumble.cancel();
+    };
+  }
+
+  function roll() {
+    if (busy) return;
+    busy = true; btn.disabled = true;
+    resultEl.innerHTML = "&nbsp;";
+    const active = dice.slice(0, count);
+    const idx = active.map(() => rand6());
+    active.forEach((d, i) => throwDie(d, POS[idx[i]], i));
+    const syms = idx.map(i => SETS[mode][i]);
+    setTimeout(() => {
+      if (count === 1) {
+        resultEl.textContent = syms[0];
+      } else if (mode === "numbers") {
+        resultEl.textContent = `${syms[0]} + ${syms[1]} = ${idx[0] + idx[1] + 2}`;
+      } else {
+        resultEl.textContent = `${syms[0]} + ${syms[1]}`;
+      }
+      history.unshift(count === 1 ? syms[0] : syms.join(mode === "numbers" ? "+" : ""));
+      if (history.length > 10) history.pop();
+      historyEl.textContent = history.length > 1
+        ? "Vorige worpen: " + history.slice(1).join("  ") : " ";
+      busy = false; btn.disabled = false;
+    }, DURATION);
+  }
+
+  renderFaces(); applyCount();
+  btn.addEventListener("click", roll);
+  tray.addEventListener("click", roll);
+  tray.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); roll(); }
+  });
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>

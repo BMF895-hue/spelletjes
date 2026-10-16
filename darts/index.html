@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Darts scorebord</title>
+<meta name="theme-color" content="#E4EBE6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E3527" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Darts">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<style>@font-face{font-family:"Barlow";font-style:normal;font-weight:400;font-display:swap;src:url("fonts/barlow-latin-400-normal.woff2") format("woff2")}@font-face{font-family:"Barlow";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/barlow-latin-500-normal.woff2") format("woff2")}@font-face{font-family:"Barlow";font-style:normal;font-weight:600;font-display:swap;src:url("fonts/barlow-latin-600-normal.woff2") format("woff2")}@font-face{font-family:"Barlow Condensed";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/barlow-condensed-latin-500-normal.woff2") format("woff2")}@font-face{font-family:"Barlow Condensed";font-style:normal;font-weight:600;font-display:swap;src:url("fonts/barlow-condensed-latin-600-normal.woff2") format("woff2")}@font-face{font-family:"Barlow Condensed";font-style:normal;font-weight:700;font-display:swap;src:url("fonts/barlow-condensed-latin-700-normal.woff2") format("woff2")}</style>
+<style>
+:root{
+  --bg:#E4EBE6; --panel:#FFFFFF; --ink:#10251C; --muted:#5A6E64; --line:#C7D3CC;
+  --green:#1C6B48; --red:#B52A31; --black:#161616; --ivory:#EFE6CF; --key:#F3F6F4;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E3527; --panel:#15473A; --ink:#EEF2EC; --muted:#A3BBAF; --line:#2A6250;
+    --green:#2E8A5E; --red:#C9363D; --key:#1C5544;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E3527; --panel:#15473A; --ink:#EEF2EC; --muted:#A3BBAF; --line:#2A6250;
+  --green:#2E8A5E; --red:#C9363D; --key:#1C5544;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);
+  font-family:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.4}
+.wrap{max-width:520px;margin:0 auto;padding:12px 12px 20px}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:focus-visible,input:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+button:disabled{opacity:.35;cursor:not-allowed}
+.wrap.game{display:flex;flex-direction:column;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px))}
+.keys{display:flex;flex-direction:column;gap:6px}
+.keys .seg,.keys .entry{flex:none;margin:0}
+.keys .grid{grid-template-rows:repeat(4,48px)}
+.keys .row4{margin:0;grid-template-rows:48px}
+.keys .pad{grid-template-rows:repeat(4,52px)}
+.keys .grid button,.keys .row4 button,.keys .pad button{height:auto}
+
+
+.advice .line{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.advice .line h2{margin:0}
+.barlinks{display:flex;gap:10px}
+.cond{font-family:"Barlow Condensed","Arial Narrow",system-ui,sans-serif}
+
+/* top bar */
+.bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex:none}
+.bar h1{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:600;font-size:20px;margin:0}
+.link{color:var(--muted);font-size:15px;padding:6px 4px;text-decoration:underline;text-underline-offset:3px}
+
+/* players */
+.players{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pl{background:var(--panel);border-radius:10px;padding:8px 10px;border-top:5px solid transparent;opacity:.62;transition:opacity .2s}
+.pl.on{opacity:1;border-top-color:var(--red)}
+.pl .nm{display:flex;justify-content:space-between;align-items:baseline;gap:6px;font-weight:600}
+.pl .nm span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl .legs{font-size:14px;color:var(--muted);font-weight:500;white-space:nowrap}
+.pl .sc{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:700;font-size:56px;line-height:.95;letter-spacing:-.01em;margin:4px 0 2px}
+.pl .meta{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.players{flex:none}
+
+/* chips: coloured like the dartboard segments */
+.chip{display:inline-flex;align-items:center;justify-content:center;min-width:46px;height:34px;padding:0 8px;border-radius:6px;
+  font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:700;font-size:20px;color:#fff;border:2px solid #9AA39E}
+.chip.r{background:var(--red)} .chip.g{background:var(--green)}
+.chip.k{background:var(--black)} .chip.i{background:var(--ivory);color:#161616}
+.chip.m{background:transparent;color:var(--muted);border-style:dashed}
+.chip.sm{min-width:36px;height:26px;font-size:16px;padding:0 6px;border-width:1.5px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+
+/* turn + advice */
+.turn{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:6px 2px;min-height:40px;flex:none}
+.turn .lbl{color:var(--muted);font-size:14px}
+.advice{background:var(--panel);border-radius:10px;padding:8px 10px;margin-bottom:6px;flex:none}
+.advice h2{font-size:15px;font-weight:600;margin:0 0 6px}
+.advice .why{font-size:14px;color:var(--muted);margin:0 0 10px}
+.advice .alt{margin-top:6px;font-size:14px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.advice .rest{font-size:14px;margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.msg{background:var(--red);color:#fff;border-radius:8px;padding:6px 10px;margin-bottom:6px;font-weight:500;font-size:14px;flex:none}
+
+/* input */
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px}
+.seg button{background:var(--key);border:2px solid var(--line);border-radius:8px;height:44px;font-weight:600}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.grid button,.row4 button,.pad button{background:var(--key);border:1px solid var(--line);border-radius:8px;height:50px;
+  font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:600;font-size:24px}
+.grid button:active,.row4 button:active,.pad button:active{transform:scale(.96)}
+.row4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}
+.row4 .bull{background:var(--red);color:#fff;border-color:var(--red)}
+.row4 .ob{background:var(--green);color:#fff;border-color:var(--green)}
+.undobtn{flex:none;height:40px;padding:0 14px;border:2px solid var(--line);border-radius:8px;background:transparent;font-weight:600;font-size:15px;color:var(--ink)}
+.turn .info{display:flex;flex-direction:column;gap:2px;min-width:0}
+.modes{display:flex;gap:16px;margin:12px 2px 0}
+.entry{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:700;font-size:44px;text-align:center;background:var(--panel);border-radius:10px;height:64px;line-height:64px;margin-bottom:6px}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.pad .ok{background:var(--ink);color:var(--bg)}
+
+/* setup */
+.setup{background:var(--panel);border-radius:12px;padding:18px 16px;margin-top:8px}
+.setup h1{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:700;font-size:44px;line-height:1;margin:0 0 18px}
+.setup label{display:block;font-weight:600;margin:14px 0 6px}
+.setup input{width:100%;height:46px;border:2px solid var(--line);border-radius:8px;background:var(--key);color:var(--ink);font:inherit;padding:0 12px}
+.big{width:100%;height:54px;border-radius:10px;background:var(--red);color:#fff;font-weight:600;font-size:18px;margin-top:22px}
+.startsel{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.startsel button{height:64px;border:2px solid var(--line);border-radius:10px;background:var(--key);
+  font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:700;font-size:34px}
+.startsel button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.firstsel{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.firstsel button{height:44px;border:2px solid var(--line);border-radius:8px;background:var(--key);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 8px}
+.firstsel button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+/* leg won */
+.won{background:var(--panel);border-radius:12px;padding:20px 16px;text-align:center;border-top:5px solid var(--red)}
+.won .w{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:700;font-size:40px;line-height:1.05;margin:0 0 6px}
+.won p{margin:0 0 4px;color:var(--muted)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script>
+/* ---------- Segments ---------- */
+const ORDER=[20,1,18,4,13,6,10,15,2,17,3,19,7,16,8,11,14,9,12,5]; // klokvolgorde op het bord
+const SEG={}; const ALL=[];
+for(let n=1;n<=20;n++){
+  SEG['S'+n]={k:'S'+n,label:''+n,v:n,dbl:false,t:'S',n};
+  SEG['D'+n]={k:'D'+n,label:'D'+n,v:2*n,dbl:true,t:'D',n};
+  SEG['T'+n]={k:'T'+n,label:'T'+n,v:3*n,dbl:false,t:'T',n};
+}
+SEG['25']={k:'25',label:'25',v:25,dbl:false,t:'OB'};
+SEG['BULL']={k:'BULL',label:'Bull',v:50,dbl:true,t:'B'};
+SEG['MISS']={k:'MISS',label:'Mis',v:0,dbl:false,t:'M'};
+for(const k in SEG){ if(k!=='MISS') ALL.push(SEG[k]); }
+const DBL=ALL.filter(s=>s.dbl);
+
+function colorClass(s){
+  if(s.t==='M')return 'm'; if(s.t==='B')return 'r'; if(s.t==='OB')return 'g';
+  const even=ORDER.indexOf(s.n)%2===0;
+  if(s.t==='S')return even?'k':'i';
+  return even?'r':'g';
+}
+function chip(s,sm){return `<span class="chip ${colorClass(s)}${sm?' sm':''}">${s.label}</span>`;}
+
+/* ---------- Voorkeuren: hoe 'prettig' is een pijl ---------- */
+const FIN={D20:0,D16:1,D18:2,D12:3,D10:3,D8:3,D14:5,D6:6,D4:6,D2:7,D1:12,BULL:10};
+function finishCost(s){return FIN[s.k]??8;}
+const SETUP={T20:0,T19:1,T18:2,T17:3,T16:3,S20:1,S19:1,'25':5,BULL:7};
+function setupCost(s){ if(s.k in SETUP)return SETUP[s.k]; if(s.t==='T')return 6; if(s.t==='S')return 2; return 7; }
+const DART_W=15; // minder pijlen weegt het zwaarst
+
+/* ---------- Alle finishes t/m 170 vooraf berekenen ---------- */
+const ROUTES={1:{},2:{},3:{}};
+function addRoute(d,arr){
+  const t=arr.reduce((a,s)=>a+s.v,0); if(t>170)return;
+  const c=d*DART_W+arr.slice(0,-1).reduce((a,s)=>a+setupCost(s),0)+finishCost(arr[arr.length-1]);
+  (ROUTES[d][t] ||= []).push({darts:arr,cost:c});
+}
+const bySetup=(a,b)=>b.v-a.v||setupCost(a)-setupCost(b);
+for(const f of DBL) addRoute(1,[f]);
+for(const a of ALL) for(const f of DBL) addRoute(2,[a,f]);
+for(let i=0;i<ALL.length;i++) for(let j=i;j<ALL.length;j++){
+  const pair=[ALL[i],ALL[j]].sort(bySetup);
+  for(const f of DBL) addRoute(3,[pair[0],pair[1],f]);
+}
+for(const d of [1,2,3]) for(const t in ROUTES[d]){ ROUTES[d][t].sort((a,b)=>a.cost-b.cost); ROUTES[d][t]=ROUTES[d][t].slice(0,6); }
+
+function checkouts(r,d,n=3){
+  let list=[]; for(let k=1;k<=d;k++) if(ROUTES[k][r]) list=list.concat(ROUTES[k][r]);
+  list.sort((a,b)=>a.cost-b.cost);
+  const seen=new Set(), out=[];
+  for(const x of list){ const key=x.darts.map(s=>s.k).join(); if(!seen.has(key)){seen.add(key);out.push(x);} if(out.length>=n)break; }
+  return out;
+}
+const BEST=[]; for(let L=0;L<=170;L++){ const c=checkouts(L,3,1)[0]; BEST[L]=c?c.cost:null; }
+
+/* Beste opzet als uitgooien niet kan: welke pijlen laten de prettigste rest over? */
+function setupAdvice(r,d){
+  const res=new Map();
+  const consider=(arr)=>{
+    const sum=arr.reduce((a,s)=>a+s.v,0), L=r-sum; if(L<2)return;
+    const leave=(L<=170&&BEST[L]!==null)?BEST[L]:200+L;
+    const score=leave+0.5*arr.reduce((a,s)=>a+setupCost(s),0);
+    const prev=res.get(L); if(!prev||score<prev.score) res.set(L,{darts:[...arr].sort(bySetup),L,score});
+  };
+  const n=ALL.length;
+  if(d===1){for(const a of ALL)consider([a]);}
+  else if(d===2){for(let i=0;i<n;i++)for(let j=i;j<n;j++)consider([ALL[i],ALL[j]]);}
+  else {for(let i=0;i<n;i++)for(let j=i;j<n;j++)for(let k=j;k<n;k++)consider([ALL[i],ALL[j],ALL[k]]);}
+  return [...res.values()].sort((a,b)=>a.score-b.score).slice(0,2);
+}
+
+function whyNot(r,d){
+  if(r>170) return `${r} is meer dan 170. De hoogste finish is 170 (T20, T20, Bull), dus deze beurt kan niet uit.`;
+  if(d===3) return `${r} is niet uit te gooien met drie pijlen: geen enkele combinatie komt precies op ${r} uit met een dubbel als laatste pijl.`;
+  if(d===2){
+    if(r>110) return `Met nog 2 pijlen is de hoogste finish 110 (T20, Bull). ${r} kan deze beurt niet meer.`;
+    return `Met nog 2 pijlen kan ${r} niet: geen twee pijlen tellen op tot ${r} met een dubbel als laatste.`;
+  }
+  if(r>50) return `Met nog 1 pijl is de hoogste finish 50 (Bull). ${r} kan deze beurt niet meer.`;
+  if(r%2===1) return `Met nog 1 pijl kan ${r} niet: een oneven score is nooit één dubbel.`;
+  return `Met nog 1 pijl kan ${r} niet: er is geen dubbel van ${r} (dubbels gaan tot 40, plus Bull = 50).`;
+}
+
+/* ---------- State ---------- */
+const KEY='darts-scorebord-v1';
+let S=null, undo=[], askNew=false;
+let draft={start:501,names:['',''],first:0};
+try{ const raw=localStorage.getItem(KEY); if(raw){ const o=JSON.parse(raw); S=o.S||null; undo=o.undo||[]; } }catch(e){}
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify({S,undo:undo.slice(-100)})); }catch(e){} }
+function snap(){ undo.push(JSON.stringify(S)); if(undo.length>300)undo.shift(); }
+
+function newGame(){
+  const names=draft.names.map((x,i)=>x.trim()||('Speler '+(i+1)));
+  S={start:draft.start,names,legs:[0,0],pts:[0,0],darts:[0,0],legStarter:draft.first,cur:draft.first,
+     scores:[draft.start,draft.start],turn:{start:draft.start,darts:[]},log:[[],[]],mode:'dart',mult:1,entry:'',winner:null,msg:''};
+  undo=[]; save(); render();
+}
+function nextTurn(){ S.cur=1-S.cur; S.turn={start:S.scores[S.cur],darts:[]}; }
+
+function throwDart(s){
+  if(S.winner!==null||!s)return;
+  snap(); S.msg='';
+  const p=S.cur, after=S.scores[p]-s.v;
+  S.turn.darts.push(s.k); S.mult=1;
+  if(after<0||after===1||(after===0&&!s.dbl)){
+    S.darts[p]+=S.turn.darts.length; S.scores[p]=S.turn.start; S.log[p].push('bust');
+    S.msg=after===0?`Bust: uitgooien moet op een dubbel. ${S.names[p]} blijft op ${S.turn.start}.`
+         :after===1?`Bust: 1 over kan nooit uit. ${S.names[p]} blijft op ${S.turn.start}.`
+         :`Bust: meer gegooid dan over was. ${S.names[p]} blijft op ${S.turn.start}.`;
+    nextTurn();
+  } else if(after===0){
+    S.scores[p]=0; S.pts[p]+=S.turn.start; S.darts[p]+=S.turn.darts.length; S.log[p].push(S.turn.start);
+    S.legs[p]++; S.winner=p;
+  } else {
+    S.scores[p]=after;
+    if(S.turn.darts.length===3){ S.pts[p]+=S.turn.start-after; S.darts[p]+=3; S.log[p].push(S.turn.start-after); nextTurn(); }
+  }
+  save(); render();
+}
+
+const IMPOSSIBLE=[163,166,169,172,173,175,176,178,179];
+function submitTotal(){
+  const v=parseInt(S.entry||'0',10);
+  if(v>180||IMPOSSIBLE.includes(v)){ S.msg=`${v} kan niet met drie pijlen. Controleer de invoer.`; S.entry=''; render(); return; }
+  const p=S.cur, start=S.turn.start, after=start-v;
+  if(after===0&&!checkouts(start,3,1).length){ S.msg=`${start} is niet uit te gooien. Controleer de invoer.`; S.entry=''; render(); return; }
+  snap(); S.msg=''; S.entry='';
+  if(after<0||after===1){ S.darts[p]+=3; S.log[p].push('bust'); S.msg=`Bust: ${S.names[p]} blijft op ${start}.`; nextTurn(); }
+  else if(after===0){ S.scores[p]=0; S.pts[p]+=start; S.darts[p]+=3; S.log[p].push(start); S.legs[p]++; S.winner=p; }
+  else { S.scores[p]=after; S.pts[p]+=v; S.darts[p]+=3; S.log[p].push(v); nextTurn(); }
+  save(); render();
+}
+function nextLeg(){
+  snap(); S.legStarter=1-S.legStarter; S.cur=S.legStarter; S.scores=[S.start,S.start];
+  S.turn={start:S.start,darts:[]}; S.log=[[],[]]; S.winner=null; S.msg=''; save(); render();
+}
+
+/* ---------- Render ---------- */
+const app=document.getElementById('app');
+const fmt=x=>x.toFixed(1).replace('.',',');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function render(){ app.className='wrap'+(S&&S.winner===null?' game':''); S?renderGame():renderSetup(); }
+
+function renderSetup(){
+  const n0=draft.names[0].trim()||'Speler 1', n1=draft.names[1].trim()||'Speler 2';
+  app.innerHTML=`<div class="setup">
+    <h1>Darts</h1>
+    <label for="n0">Speler 1</label><input id="n0" value="${esc(draft.names[0])}" placeholder="Naam" autocomplete="off">
+    <label for="n1">Speler 2</label><input id="n1" value="${esc(draft.names[1])}" placeholder="Naam" autocomplete="off">
+    <label>Startscore</label>
+    <div class="startsel">
+      <button data-act="start" data-v="301" aria-pressed="${draft.start===301}">301</button>
+      <button data-act="start" data-v="501" aria-pressed="${draft.start===501}">501</button>
+    </div>
+    <label>Wie begint?</label>
+    <div class="firstsel">
+      <button data-act="first" data-v="0" aria-pressed="${draft.first===0}">${esc(n0)}</button>
+      <button data-act="first" data-v="1" aria-pressed="${draft.first===1}">${esc(n1)}</button>
+    </div>
+    <button class="big" data-act="go">Start spel</button>
+  </div>`;
+  ['n0','n1'].forEach((id,i)=>{ const el=document.getElementById(id);
+    el.addEventListener('input',()=>{draft.names[i]=el.value; const b=app.querySelector(`.firstsel button[data-v="${i}"]`); if(b)b.textContent=el.value.trim()||('Speler '+(i+1));}); });
+}
+
+function playerCard(i){
+  const on=S.cur===i&&S.winner===null;
+  const avg=S.darts[i]?fmt(S.pts[i]/S.darts[i]*3):'–';
+  const last=S.log[i].slice(-4).map(x=>x==='bust'?'bust':x).join(', ');
+  return `<div class="pl${on?' on':''}">
+    <div class="nm"><span>${esc(S.names[i])}</span><span class="legs">legs ${S.legs[i]}</span></div>
+    <div class="sc">${S.scores[i]}</div>
+    <div class="meta">gem. ${avg}${last?` · ${last}`:''}</div>
+  </div>`;
+}
+
+function adviceHTML(){
+  const r=S.scores[S.cur], d=3-S.turn.darts.length;
+  const outs=checkouts(r,d,3);
+  if(outs.length){
+    const [best,...alts]=outs;
+    return `<div class="advice"><h2>Uitgooien: ${r}</h2>
+      <div class="chips">${best.darts.map(s=>chip(s)).join('')}</div>
+      ${alts.length?`<div class="alt">Of: ${alts.map(a=>`<span class="chips">${a.darts.map(s=>chip(s,1)).join('')}</span>`).join('<span>of</span>')}</div>`:''}
+    </div>`;
+  }
+  const set=setupAdvice(r,d);
+  const restLine=(o)=>{
+    const fin=o.L<=170?checkouts(o.L,3,1)[0]:null;
+    return fin?`<div class="rest">Rest ${o.L}, daarna ${`<span class="chips">${fin.darts.map(s=>chip(s,1)).join('')}</span>`}</div>`
+              :`<div class="rest">Rest ${o.L}</div>`;
+  };
+  if(set.length&&set[0].L>170) return `<div class="advice"><div class="line"><h2>Beste score:</h2><span class="chips">${set[0].darts.map(s=>chip(s,1)).join('')}</span></div></div>`;
+  let h=`<div class="advice"><h2>Uitgooien niet mogelijk${set.length?`. Beste optie met ${d} ${d===1?'pijl':'pijlen'}:`:''}</h2>`;
+  if(set.length){
+    h+=`<div class="chips">${set[0].darts.map(s=>chip(s)).join('')}</div>${restLine(set[0])}`;
+    if(set[1]) h+=`<div class="alt">Of: <span class="chips">${set[1].darts.map(s=>chip(s,1)).join('')}</span> rest ${set[1].L}</div>`;
+  }
+  return h+'</div>';
+}
+
+function inputHTML(){
+  if(S.mode==='total'){
+    return `<div class="keys"><div class="entry" aria-live="polite">${S.entry||'0'}</div>
+      <div class="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-act="digit" data-v="${n}">${n}</button>`).join('')}
+        <button data-act="back" aria-label="Wis laatste cijfer">⌫</button><button data-act="digit" data-v="0">0</button><button class="ok" data-act="ok">OK</button></div></div>`;
+  }
+  const m=S.mult;
+  return `<div class="keys"><div class="seg" role="group" aria-label="Ring">
+      <button data-act="mult" data-v="1" aria-pressed="${m===1}">Enkel</button>
+      <button data-act="mult" data-v="2" aria-pressed="${m===2}">Dubbel</button>
+      <button data-act="mult" data-v="3" aria-pressed="${m===3}">Triple</button></div>
+    <div class="grid">${Array.from({length:20},(_,i)=>`<button data-act="num" data-v="${i+1}">${i+1}</button>`).join('')}</div>
+    <div class="row4" style="grid-template-columns:repeat(3,1fr)">
+      <button class="ob" data-act="25" ${m===3?'disabled':''}>25</button>
+      <button class="bull" data-act="bull">Bull</button>
+      <button data-act="miss">Mis</button></div></div>`;
+}
+
+function renderGame(){
+  let h=`<div class="bar"><h1>${S.start}, dubbel uit</h1><div class="barlinks">${S.winner===null?`<button class="link" data-act="mode" ${S.turn.darts.length?'disabled':''}>${S.mode==='dart'?'Per beurt':'Per pijl'}</button>`:''}<button class="link" data-act="new">Nieuw spel</button></div></div>
+    ${askNew?`<div class="advice"><h2>Huidig spel stoppen?</h2><div class="firstsel">
+      <button data-act="newno">Annuleren</button><button data-act="newyes" style="background:var(--red);color:#fff;border-color:var(--red)">Nieuw spel</button></div></div>`:''}
+    <div class="players">${playerCard(0)}${playerCard(1)}</div>`;
+  if(S.winner!==null){
+    const w=S.winner, lastTurn=S.log[w][S.log[w].length-1];
+    h+=`<div class="won" style="margin-top:10px"><div class="w">${esc(S.names[w])} wint de leg</div>
+      <p>Uitgegooid met ${lastTurn}. Stand ${S.legs[0]}–${S.legs[1]}.</p>
+      <button class="big" data-act="nextleg">Volgende leg (${esc(S.names[1-S.legStarter])} begint)</button>
+      <button class="link" data-act="undo" style="margin-top:10px">Ongedaan maken</button></div>`;
+    app.innerHTML=h; return;
+  }
+  const td=S.turn.darts.map(k=>SEG[k]);
+  const sum=td.reduce((a,s)=>a+s.v,0);
+  h+=`<div class="turn"><div class="info"><div class="chips">${td.length?td.map(s=>chip(s)).join(''):`<span class="lbl">${esc(S.names[S.cur])} gooit</span>`}</div>
+      ${td.length?`<span class="lbl">${sum} deze beurt, pijl ${td.length+1} van 3</span>`:''}</div>
+      <button class="undobtn" data-act="undo" ${undo.length?'':'disabled'} aria-label="Laatste invoer ongedaan maken">↶ Terug</button></div>`;
+  if(S.msg) h+=`<div class="msg" role="status">${esc(S.msg)}</div>`;
+  h+=adviceHTML()+inputHTML();
+  app.innerHTML=h;
+}
+
+/* ---------- Events ---------- */
+app.addEventListener('click',e=>{
+  const b=e.target.closest('button[data-act]'); if(!b||b.disabled)return;
+  const a=b.dataset.act, v=b.dataset.v;
+  if(!S){
+    if(a==='start'){draft.start=+v;render();}
+    else if(a==='first'){draft.first=+v;render();}
+    else if(a==='go')newGame();
+    return;
+  }
+  switch(a){
+    case 'mult': S.mult=S.mult===+v&&+v!==1?1:+v; render(); break;
+    case 'num': throwDart(SEG[(S.mult===1?'S':S.mult===2?'D':'T')+v]); break;
+    case '25': throwDart(S.mult===2?SEG.BULL:SEG['25']); break;
+    case 'bull': throwDart(SEG.BULL); break;
+    case 'miss': throwDart(SEG.MISS); break;
+    case 'undo': if(undo.length){const mode=S.mode; S=JSON.parse(undo.pop()); S.msg=''; S.entry=''; S.mult=1; S.mode=S.turn.darts.length?'dart':mode; save(); render();} break;
+    case 'mode': S.mode=S.mode==='dart'?'total':'dart'; S.entry=''; save(); render(); break;
+    case 'digit': if((S.entry+v).length<=3){S.entry=(S.entry==='0'?'':S.entry)+v;} render(); break;
+    case 'back': S.entry=S.entry.slice(0,-1); render(); break;
+    case 'ok': submitTotal(); break;
+    case 'nextleg': nextLeg(); break;
+    case 'new': askNew=true; render(); break;
+    case 'newno': askNew=false; render(); break;
+    case 'newyes': askNew=false; draft.names=[...S.names]; draft.start=S.start; S=null; undo=[]; save(); render(); break;
+  }
+});
+render();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>
