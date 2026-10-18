@@ -1,6 +1,6 @@
 // Service worker: bewaart de app lokaal zodat hij ook zonder internet start.
 // Bij een nieuwe versie wordt CACHE opgehoogd; oude caches worden dan opgeruimd.
-const CACHE = 'dobbelstenen-v1';
+const CACHE = 'dobbelstenen-v2';
 const FILES = ["./", "index.html", "manifest.webmanifest", "apple-touch-icon.png", "icon-192.png", "icon-512.png", "fonts/bricolage-grotesque-latin-500-normal.woff2", "fonts/bricolage-grotesque-latin-800-normal.woff2"];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));

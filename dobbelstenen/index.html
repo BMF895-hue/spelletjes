@@ -86,6 +86,13 @@
   button:active { transform: translateY(3px); box-shadow: 0 1px 0 #a97f26; }
   button:focus-visible, .tray:focus-visible { outline: 3px solid var(--text); outline-offset: 6px; }
   button:disabled { opacity: .7; cursor: default; }
+  .face.pips {
+    display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+    padding: 16%; gap: 4%; place-items: center;
+  }
+  .pip { width: 72%; aspect-ratio: 1; border-radius: 50%; background: var(--ink);
+         box-shadow: inset 0 2px 3px rgba(0,0,0,.45); }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .options { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; justify-content: center; }
   .seg {
     display: inline-flex; border-radius: 999px; padding: 3px;
@@ -110,13 +117,13 @@
   <div class="options">
     <fieldset class="seg">
       <legend>Aantal dobbelstenen</legend>
-      <input type="radio" name="count" id="c1" value="1"><label for="c1">1 steen</label>
-      <input type="radio" name="count" id="c2" value="2" checked><label for="c2">2 stenen</label>
+      <input type="radio" name="count" id="c1" value="1" checked><label for="c1">1 steen</label>
+      <input type="radio" name="count" id="c2" value="2"><label for="c2">2 stenen</label>
     </fieldset>
     <fieldset class="seg">
       <legend>Letters of cijfers</legend>
-      <input type="radio" name="mode" id="mL" value="letters" checked><label for="mL">A–F</label>
-      <input type="radio" name="mode" id="mN" value="numbers"><label for="mN">1–6</label>
+      <input type="radio" name="mode" id="mL" value="letters"><label for="mL">A–F</label>
+      <input type="radio" name="mode" id="mN" value="numbers" checked><label for="mN">1–6</label>
     </fieldset>
   </div>
 
@@ -129,7 +136,7 @@
     </div></div></div>
   </div>
 
-  <div class="result" id="result" aria-live="polite">&nbsp;</div>
+  <div class="sr-only" id="result" aria-live="polite"></div>
   <button id="roll">Gooien</button>
   <div class="history" id="history">Tik op de knop of op de dobbelstenen.</div>
 
@@ -139,7 +146,9 @@
   const SETS = { letters: ["A","B","C","D","E","F"], numbers: ["1","2","3","4","5","6"] };
   const FACE_CLASS = ["f-a","f-b","f-c","f-d","f-e","f-f"];
   const POS = ["A","B","C","D","E","F"]; // cube positions; opposite faces: A–F, B–E, C–D (= 1–6, 2–5, 3–4)
-  let mode = "letters", count = 2;
+  let mode = "numbers", count = 1;
+  // Which cells of a 3x3 grid (0–8, row by row) hold a pip for 1–6
+  const PIPS = [[4],[2,6],[2,4,6],[0,2,6,8],[0,2,4,6,8],[0,2,3,5,6,8]];
   const DURATION = 1600;
 
   const dice = [...document.querySelectorAll(".slot")].map(slot => ({
@@ -158,8 +167,12 @@
 
   function renderFaces() {
     dice.forEach(d => {
-      d.cube.innerHTML = SETS[mode].map((sym, i) =>
-        `<div class="face ${FACE_CLASS[i]}">${sym}</div>`).join("");
+      d.cube.innerHTML = SETS[mode].map((sym, i) => mode === "numbers"
+        ? `<div class="face pips ${FACE_CLASS[i]}" aria-label="${sym}">` +
+          Array.from({length: 9}, (_, c) =>
+            PIPS[i].includes(c) ? '<span class="pip"></span>' : '<span></span>').join("") +
+          `</div>`
+        : `<div class="face ${FACE_CLASS[i]}">${sym}</div>`).join("");
     });
   }
   function applyCount() {
@@ -168,7 +181,7 @@
   }
   function resetResults() {
     history.length = 0;
-    resultEl.innerHTML = "&nbsp;";
+    resultEl.textContent = "";
     historyEl.textContent = "Tik op de knop of op de dobbelstenen.";
   }
   document.querySelectorAll('input[name="count"]').forEach(r => r.addEventListener("change", () => {
@@ -232,23 +245,17 @@
   function roll() {
     if (busy) return;
     busy = true; btn.disabled = true;
-    resultEl.innerHTML = "&nbsp;";
+    resultEl.textContent = "";
     const active = dice.slice(0, count);
     const idx = active.map(() => rand6());
     active.forEach((d, i) => throwDie(d, POS[idx[i]], i));
     const syms = idx.map(i => SETS[mode][i]);
     setTimeout(() => {
-      if (count === 1) {
-        resultEl.textContent = syms[0];
-      } else if (mode === "numbers") {
-        resultEl.textContent = `${syms[0]} + ${syms[1]} = ${idx[0] + idx[1] + 2}`;
-      } else {
-        resultEl.textContent = `${syms[0]} + ${syms[1]}`;
-      }
-      history.unshift(count === 1 ? syms[0] : syms.join(mode === "numbers" ? "+" : ""));
+      resultEl.textContent = "Gegooid: " + syms.join(" en ");
+      history.unshift(syms.join(mode === "numbers" ? "·" : ""));
       if (history.length > 10) history.pop();
       historyEl.textContent = history.length > 1
-        ? "Vorige worpen: " + history.slice(1).join("  ") : " ";
+        ? "Vorige worpen: " + history.slice(1).join("   ") : " ";
       busy = false; btn.disabled = false;
     }, DURATION);
   }
