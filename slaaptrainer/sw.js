@@ -1,6 +1,6 @@
 // Service worker: bewaart de app lokaal zodat hij ook zonder internet start.
 // Bij een nieuwe versie wordt CACHE opgehoogd; oude caches worden dan opgeruimd.
-const CACHE = 'slaaptrainer-v3';
+const CACHE = 'slaaptrainer-v4';
 const FILES = ["./", "index.html", "manifest.webmanifest", "apple-touch-icon.png", "icon-192.png", "icon-512.png", "fonts/chivo-mono-latin-300-normal.woff2", "fonts/hanken-grotesk-latin-400-normal.woff2", "fonts/hanken-grotesk-latin-600-normal.woff2"];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));

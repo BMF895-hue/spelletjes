@@ -122,6 +122,82 @@ body.ui .top button { opacity: 1; }
   text-transform: uppercase;
   color: var(--fg-soft);
 }
+/* ---- tafereel: maan 's nachts, zon overdag ---- */
+.scene {
+  display: none;
+  flex: none;
+  width: min(100%, 760px, calc(40vh * 400 / 220));
+  aspect-ratio: 400 / 220;
+  overflow: visible;
+}
+body.scene-on .scene { display: block; }
+body.scene-on .stage { gap: 1.6vh; }
+body.scene-on .clock { font-size: min(21vw, 20vh); }
+body.scene-on .clock.sec { font-size: min(14vw, 15vh); }
+body.scene-on .date { display: none; }
+.msg {
+  display: none;
+  font-size: clamp(16px, 4.6vw, 30px);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--fg-soft);
+  text-align: center;
+}
+body.scene-on .msg { display: block; }
+:root[data-mode="day"] .msg { color: var(--fg); }
+
+.night-g, .day-g { transition: opacity 1.5s ease; }
+:root[data-mode="night"] .day-g, :root[data-mode="day"] .night-g { opacity: 0; }
+
+/* nacht */
+.track { fill: none; stroke: var(--fg); stroke-opacity: 0.22; stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: 0.1 9; }
+.goal { fill: none; stroke: var(--fg); stroke-opacity: 0.4; stroke-width: 1.6; stroke-linecap: round; }
+.star { fill: var(--fg); opacity: 0.45; }
+.moon-body { fill: var(--fg); }
+.moon-face { fill: none; stroke: var(--bg); stroke-width: 2.4; stroke-linecap: round; }
+.moon-cheek { fill: var(--bg); opacity: 0.22; }
+.zz { fill: var(--fg); font-family: var(--font-ui); font-weight: 600; opacity: 0.5; }
+.anim .zz { opacity: 0; }
+
+/* dag */
+.hill-back { fill: url(#hillV); opacity: 0.09; }
+.hill-front { fill: url(#hillV); opacity: 0.15; }
+.sun-body { fill: #f7c544; }
+.sun-ray { stroke: #f0a12e; stroke-width: 7; stroke-linecap: round; }
+.sun-face { fill: none; stroke: #6b3a12; stroke-width: 4; stroke-linecap: round; }
+.sun-eye { fill: #6b3a12; }
+.sun-cheek { fill: #ff7a59; opacity: 0.35; }
+.cloud { fill: #ffffff; opacity: 0.75; }
+
+/* beweging; alles traag, zodat het 's nachts niet prikkelt */
+.anim .breath, .anim .rays, .anim .eyes, .anim .twinkle, .anim .zz, .anim .drift { transform-box: fill-box; transform-origin: center; }
+.anim .breath { animation: breath 7s ease-in-out infinite; }
+.anim .twinkle { animation: twinkle 9s ease-in-out infinite; }
+.anim .zz { animation: zz 9s ease-in-out infinite; }
+.anim .zz.z2 { animation-delay: 3s; }
+.anim .zz.z3 { animation-delay: 6s; }
+.anim .rays { animation: spin 90s linear infinite; }
+.anim .eyes { animation: blink 7s ease-in-out infinite; }
+.anim .drift { animation: drift 110s linear infinite; }
+.sunrise { transform-box: view-box; }
+.anim .sunrise.rise { animation: rise 3.2s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes breath { 0%, 100% { transform: scale(1) rotate(-2deg); } 50% { transform: scale(1.035) rotate(2deg); } }
+@keyframes twinkle { 0%, 100% { opacity: 0.2; } 50% { opacity: 0.6; } }
+@keyframes zz {
+  0% { opacity: 0; transform: translate(0, 0); }
+  25% { opacity: 0.75; }
+  100% { opacity: 0; transform: translate(26px, -46px); }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+@keyframes drift { from { transform: translateX(-160px); } to { transform: translateX(560px); } }
+@keyframes rise { from { transform: translateY(150px); } to { transform: translateY(0); } }
+
+@media (max-height: 450px) {
+  body.scene-on .stage { gap: 4px; }
+  .msg { font-size: 15px; }
+}
+
 .foot {
   flex: none;
   min-height: 44px;
@@ -210,6 +286,8 @@ legend b { color: var(--sheet-fg); font-weight: 600; }
 
 @media (prefers-reduced-motion: reduce) {
   body.ready, body.ready .dim { transition: none; }
+  .anim * { animation: none !important; }
+  .anim .zz { opacity: 0.5; }
 }
 </style>
 </head>
@@ -222,8 +300,88 @@ legend b { color: var(--sheet-fg); font-weight: 600; }
 </header>
 
 <main class="stage" id="stage">
+  <svg class="scene anim" id="scene" viewBox="0 0 400 220" role="img" aria-labelledby="msg">
+    <defs>
+      <mask id="crescent" maskContentUnits="userSpaceOnUse">
+        <circle r="34" fill="#fff"/>
+        <circle cx="14" cy="-8" r="28" fill="#000"/>
+      </mask>
+      <clipPath id="sky"><rect width="400" height="220"/></clipPath>
+      <!-- heuvels lopen zacht uit naar onder en naar de zijkanten -->
+      <linearGradient id="hillV" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" style="stop-color:var(--fg);stop-opacity:1"/>
+        <stop offset=".6" style="stop-color:var(--fg);stop-opacity:1"/>
+        <stop offset="1" style="stop-color:var(--fg);stop-opacity:0"/>
+      </linearGradient>
+      <linearGradient id="edgeG" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#000"/><stop offset=".16" stop-color="#fff"/>
+        <stop offset=".84" stop-color="#fff"/><stop offset="1" stop-color="#000"/>
+      </linearGradient>
+      <mask id="edges" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" x="0" y="0" width="400" height="220">
+        <rect width="400" height="220" fill="url(#edgeG)"/>
+      </mask>
+    </defs>
+
+    <!-- nacht: maantje reist langs de stippelboog naar het zonnetje -->
+    <g class="night-g">
+      <g id="stars">
+        <path class="star twinkle" transform="translate(64 38)" d="M0-6L1.4-1.4L6 0L1.4 1.4L0 6L-1.4 1.4L-6 0L-1.4-1.4Z"/>
+        <path class="star twinkle" transform="translate(128 18) scale(.7)" style="animation-delay:-3s" d="M0-6L1.4-1.4L6 0L1.4 1.4L0 6L-1.4 1.4L-6 0L-1.4-1.4Z"/>
+        <path class="star twinkle" transform="translate(262 22) scale(.85)" style="animation-delay:-6s" d="M0-6L1.4-1.4L6 0L1.4 1.4L0 6L-1.4 1.4L-6 0L-1.4-1.4Z"/>
+        <path class="star twinkle" transform="translate(340 44) scale(.65)" style="animation-delay:-1.5s" d="M0-6L1.4-1.4L6 0L1.4 1.4L0 6L-1.4 1.4L-6 0L-1.4-1.4Z"/>
+        <path class="star twinkle" transform="translate(112 132) scale(.6)" style="animation-delay:-4.5s" d="M0-6L1.4-1.4L6 0L1.4 1.4L0 6L-1.4 1.4L-6 0L-1.4-1.4Z"/>
+        <path class="star twinkle" transform="translate(292 128) scale(.75)" style="animation-delay:-7.5s" d="M0-6L1.4-1.4L6 0L1.4 1.4L0 6L-1.4 1.4L-6 0L-1.4-1.4Z"/>
+        <path class="star twinkle" transform="translate(200 160) scale(.55)" style="animation-delay:-2.2s" d="M0-6L1.4-1.4L6 0L1.4 1.4L0 6L-1.4 1.4L-6 0L-1.4-1.4Z"/>
+        <path class="star twinkle" transform="translate(30 96) scale(.5)" style="animation-delay:-5.2s" d="M0-6L1.4-1.4L6 0L1.4 1.4L0 6L-1.4 1.4L-6 0L-1.4-1.4Z"/>
+        <path class="star twinkle" transform="translate(378 104) scale(.55)" style="animation-delay:-8.2s" d="M0-6L1.4-1.4L6 0L1.4 1.4L0 6L-1.4 1.4L-6 0L-1.4-1.4Z"/>
+      </g>
+      <path class="track" id="track" d="M0 0"/>
+      <g class="goal" id="goal">
+        <circle r="6"/>
+        <path d="M0-10V-13M0 10V13M-10 0H-13M10 0H13M7 -7L9.2 -9.2M-7 -7L-9.2 -9.2M7 7L9.2 9.2M-7 7L-9.2 9.2"/>
+      </g>
+      <g id="moon" transform="translate(200 76) scale(1.05)">
+        <g class="breath">
+          <circle class="moon-body" r="34" mask="url(#crescent)"/>
+          <path class="moon-face" d="M-27 -5 q5 4 10 0"/>
+          <path class="moon-face" d="M-25 11 q4 3.5 8 0"/>
+          <circle class="moon-cheek" cx="-28" cy="4" r="3.2"/>
+        </g>
+        <text class="zz z1" x="14" y="-24" font-size="13">z</text>
+        <text class="zz z2" x="14" y="-24" font-size="17">z</text>
+        <text class="zz z3" x="14" y="-24" font-size="21">Z</text>
+      </g>
+    </g>
+
+    <!-- dag: zon komt op achter de heuvels -->
+    <g class="day-g">
+      <g clip-path="url(#sky)">
+        <g class="drift"><g class="cloud" transform="translate(0 54)">
+          <circle cx="0" cy="0" r="13"/><circle cx="18" cy="-9" r="17"/><circle cx="37" cy="0" r="12"/><rect x="0" y="0" width="37" height="12"/>
+        </g></g>
+        <g class="sunrise" id="sunrise">
+          <g transform="translate(200 106)">
+            <g class="rays" id="rays"></g>
+            <circle class="sun-body" r="46"/>
+            <circle class="sun-cheek" cx="-27" cy="9" r="7"/>
+            <circle class="sun-cheek" cx="27" cy="9" r="7"/>
+            <g class="eyes">
+              <ellipse class="sun-eye" cx="-15" cy="-8" rx="4.5" ry="6"/>
+              <ellipse class="sun-eye" cx="15" cy="-8" rx="4.5" ry="6"/>
+            </g>
+            <path class="sun-face" d="M-17 9 Q0 26 17 9"/>
+          </g>
+        </g>
+      </g>
+      <g mask="url(#edges)">
+        <path class="hill-back" d="M0 220 L0 186 Q70 160 150 182 Q230 204 300 178 Q350 162 400 176 L400 220 Z"/>
+        <path class="hill-front" d="M0 220 L0 204 Q110 178 220 200 Q320 220 400 196 L400 220 Z"/>
+      </g>
+    </g>
+  </svg>
   <div class="clock" id="clock">00:00</div>
   <div class="date" id="date"></div>
+  <div class="msg" id="msg"></div>
 </main>
 
 <footer class="foot" id="foot"></footer>
@@ -271,6 +429,8 @@ legend b { color: var(--sheet-fg); font-weight: 600; }
     <p class="hint">De helderheid van je telefoon stel je zelf in, een webpagina kan die niet aanpassen. Deze regelaars maken alleen de kleuren op de pagina zachter.</p>
 
     <label class="check" for="seconds"><input type="checkbox" id="seconds"> Seconden tonen</label>
+    <label class="check" for="sceneOn"><input type="checkbox" id="sceneOn"> Zon en maan tonen</label>
+    <label class="check" for="motionOn"><input type="checkbox" id="motionOn"> Bewegende plaatjes</label>
 
     <fieldset>
       <legend>Standen bekijken</legend>
@@ -284,7 +444,7 @@ legend b { color: var(--sheet-fg); font-weight: 600; }
 
     <p class="hint warn" id="wakeHint" hidden></p>
 
-    <p class="hint ver">Versie 3 · 19-10-2026</p>
+    <p class="hint ver">Versie 4 · 19-10-2026</p>
   </div>
 </section>
 
@@ -305,7 +465,7 @@ legend b { color: var(--sheet-fg); font-weight: 600; }
     { id: 'blauw',  name: 'Blauw',  bg: '#cfe0ee', fg: '#17293a' },
     { id: 'perzik', name: 'Perzik', bg: '#f4d6bd', fg: '#3d2412' }
   ];
-  var DEF = { nightStart: '19:30', dayStart: '07:00', night: 'amber', day: 'groen', nightLevel: 60, dayLevel: 100, seconds: false };
+  var DEF = { nightStart: '19:30', dayStart: '07:00', night: 'amber', day: 'groen', nightLevel: 60, dayLevel: 100, seconds: false, scene: true, motion: true };
 
   function $(id) { return document.getElementById(id); }
   function pad(n) { return (n < 10 ? '0' : '') + n; }
@@ -329,7 +489,9 @@ legend b { color: var(--sheet-fg); font-weight: 600; }
       day:   has(DAY, s.day)     ? s.day   : DEF.day,
       nightLevel: clamp(s.nightLevel === undefined ? NaN : Number(s.nightLevel), 1, 100, DEF.nightLevel),
       dayLevel:   clamp(s.dayLevel === undefined ? NaN : Number(s.dayLevel), 20, 100, DEF.dayLevel),
-      seconds: s.seconds === true
+      seconds: s.seconds === true,
+      scene: s.scene !== false,
+      motion: s.motion !== false
     };
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
@@ -354,8 +516,70 @@ legend b { color: var(--sheet-fg); font-weight: 600; }
     nightLevel: $('nightLevel'), dayLevel: $('dayLevel'),
     nightOut: $('nightOut'), dayOut: $('dayOut'),
     seconds: $('seconds'), modeSeg: $('modeSeg'), wakeHint: $('wakeHint'),
-    themeColor: $('themeColor')
+    themeColor: $('themeColor'),
+    scene: $('scene'), moon: $('moon'), sunrise: $('sunrise'), msg: $('msg'),
+    sceneOn: $('sceneOn'), motionOn: $('motionOn')
   };
+
+  /* ---- tafereel ----
+     De maan loopt in de loop van de nacht over een boog van links naar rechts.
+     Aan het eind van de boog staat een klein zonnetje: daar is de nacht voorbij. */
+  // a0 = start van de maan, a1 = eindpunt van de maan, aGoal = plek van het zonnetje (graden)
+  var ARC = { cx: 200, cy: 226, rx: 168, ry: 150, a0: 165, a1: 24, aGoal: 5 };
+  var MOON_SCALE = 1.05;
+  function arcAt(deg) {
+    var a = deg * Math.PI / 180;
+    return [ARC.cx + ARC.rx * Math.cos(a), ARC.cy - ARC.ry * Math.sin(a)];
+  }
+  function arcPt(f) { return arcAt(ARC.a0 - (ARC.a0 - ARC.a1) * f); }
+  (function buildScene() {
+    var p0 = arcPt(0), p1 = arcAt(ARC.aGoal);
+    $('track').setAttribute('d', 'M' + p0[0].toFixed(1) + ' ' + p0[1].toFixed(1) + ' A' + ARC.rx + ' ' + ARC.ry + ' 0 0 1 ' + p1[0].toFixed(1) + ' ' + p1[1].toFixed(1));
+    $('goal').setAttribute('transform', 'translate(' + p1[0].toFixed(1) + ' ' + p1[1].toFixed(1) + ')');
+    var rays = $('rays'), ns = 'http://www.w3.org/2000/svg';
+    for (var i = 0; i < 12; i++) {
+      var a = i * Math.PI / 6, l = document.createElementNS(ns, 'line');
+      l.setAttribute('class', 'sun-ray');
+      l.setAttribute('x1', (58 * Math.cos(a)).toFixed(1)); l.setAttribute('y1', (58 * Math.sin(a)).toFixed(1));
+      l.setAttribute('x2', (74 * Math.cos(a)).toFixed(1)); l.setAttribute('y2', (74 * Math.sin(a)).toFixed(1));
+      rays.appendChild(l);
+    }
+  })();
+
+  // deel van de nacht dat voorbij is (0 = net begonnen, 1 = bijna dag)
+  function nightFraction(now) {
+    var n = toMin(state.nightStart), d = toMin(state.dayStart);
+    var len = (d - n + 1440) % 1440;
+    if (!len) return 0;
+    var t = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+    var gone = (t - n + 1440) % 1440;
+    return gone > len ? 0.35 : gone / len; // buiten de nacht (voorbeeld): maan ergens links van het midden
+  }
+
+  var lastNight = null, moonKey = '';
+  function renderScene(night, now) {
+    document.body.classList.toggle('scene-on', state.scene);
+    el.scene.classList.toggle('anim', state.motion);
+    if (!state.scene) { lastNight = night; return; }
+    if (night) {
+      var p = arcPt(forced === 'night' ? 0.35 : nightFraction(now));
+      var k = 'translate(' + p[0].toFixed(1) + ' ' + p[1].toFixed(1) + ') scale(' + MOON_SCALE + ')';
+      if (k !== moonKey) { moonKey = k; el.moon.setAttribute('transform', k); }
+    } else if (lastNight !== false) {
+      // dag begint (of app geopend overdag): zon laten opkomen
+      el.sunrise.classList.remove('rise');
+      void el.sunrise.getBoundingClientRect();
+      el.sunrise.classList.add('rise');
+    }
+    lastNight = night;
+    var m;
+    if (night) m = 'Nog even slapen';
+    else {
+      var since = (now.getHours() * 60 + now.getMinutes() - toMin(state.dayStart) + 1440) % 1440;
+      m = (forced === 'day' || since < 120) ? 'Je mag opstaan!' : 'Fijne dag!';
+    }
+    if (el.msg.textContent !== m) el.msg.textContent = m;
+  }
 
   /* ---- stand bepalen ---- */
   function isNight(t) {
@@ -437,6 +661,7 @@ legend b { color: var(--sheet-fg); font-weight: 600; }
     var ds = now.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
     if (el.date.textContent !== ds) el.date.textContent = ds;
     applyTheme(night);
+    renderScene(night, now);
     var c = caption(night);
     if (el.foot.textContent !== c.text) el.foot.textContent = c.text;
     el.foot.classList.toggle('ask', c.ask);
@@ -477,6 +702,8 @@ legend b { color: var(--sheet-fg); font-weight: 600; }
     el.nightOut.textContent = state.nightLevel + '%';
     el.dayOut.textContent = state.dayLevel + '%';
     el.seconds.checked = state.seconds;
+    el.sceneOn.checked = state.scene;
+    el.motionOn.checked = state.motion;
     el.nightName.textContent = find(NIGHT, state.night).name;
     el.dayName.textContent = find(DAY, state.day).name;
     [].forEach.call(el.nightSwatches.children, function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-id') === state.night)); });
@@ -508,6 +735,8 @@ legend b { color: var(--sheet-fg); font-weight: 600; }
   });
   el.dayLevel.addEventListener('input', function () { state.dayLevel = clamp(Number(el.dayLevel.value), 20, 100, DEF.dayLevel); save(); sync(); render(); });
   el.seconds.addEventListener('change', function () { state.seconds = el.seconds.checked; save(); render(); });
+  el.sceneOn.addEventListener('change', function () { state.scene = el.sceneOn.checked; save(); render(); });
+  el.motionOn.addEventListener('change', function () { state.motion = el.motionOn.checked; save(); render(); });
 
   [].forEach.call(el.modeSeg.children, function (b) {
     b.addEventListener('click', function () {
