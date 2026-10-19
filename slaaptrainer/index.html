@@ -199,6 +199,14 @@ legend b { color: var(--sheet-fg); font-weight: 600; }
 
 .hint { margin: 0; font-size: 13px; line-height: 1.5; color: var(--sheet-soft); max-width: 65ch; }
 .hint.warn { color: var(--sheet-fg); }
+.hint.ver { font-variant-numeric: tabular-nums; }
+
+.fs { display: grid; gap: 8px; }
+.wide {
+  min-height: 48px; width: 100%;
+  border: 1px solid var(--sheet-line); background: transparent;
+  color: var(--sheet-fg); font-size: 16px; cursor: pointer;
+}
 
 @media (prefers-reduced-motion: reduce) {
   body.ready, body.ready .dim { transition: none; }
@@ -228,6 +236,11 @@ legend b { color: var(--sheet-fg); font-weight: 600; }
     <div class="sheet-head">
       <h2 id="sheet-title">Instellingen</h2>
       <button class="done" id="close" type="button">Klaar</button>
+    </div>
+
+    <div class="fs" id="fsRow" hidden>
+      <button class="wide" id="fsBtn" type="button">Volledig scherm</button>
+      <p class="hint" id="fsHint">Verbergt de statusbalk en de balk onderin. Werkt op iPad, niet op iPhone.</p>
     </div>
 
     <div class="pair">
@@ -270,6 +283,8 @@ legend b { color: var(--sheet-fg); font-weight: 600; }
     </fieldset>
 
     <p class="hint warn" id="wakeHint" hidden></p>
+
+    <p class="hint ver">Versie 3 · 19-10-2026</p>
   </div>
 </section>
 
@@ -513,6 +528,39 @@ legend b { color: var(--sheet-fg); font-weight: 600; }
     el.gear.setAttribute('aria-expanded', 'false');
     el.gear.focus();
   }
+  /* ---- volledig scherm (iPad; iPhone ondersteunt dit niet voor pagina's) ---- */
+  var fsRow = $('fsRow'), fsBtn = $('fsBtn');
+  var fsOK = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+  function fsEl() { return document.fullscreenElement || document.webkitFullscreenElement || null; }
+  function fsLabel() { fsBtn.textContent = fsEl() ? 'Volledig scherm verlaten' : 'Volledig scherm'; }
+  function fsFail() {
+    $('fsHint').textContent = 'Volledig scherm lukte hier niet. Open de pagina in Safari zelf en probeer het daar.';
+    openSheet();
+  }
+  function enterFs() {
+    var r = document.documentElement;
+    try {
+      var p = r.requestFullscreen ? r.requestFullscreen() : (r.webkitRequestFullscreen ? r.webkitRequestFullscreen() : null);
+      if (p && typeof p.catch === 'function') p.catch(fsFail);
+    } catch (e) { fsFail(); }
+  }
+  function exitFs() {
+    try {
+      var p = document.exitFullscreen ? document.exitFullscreen() : (document.webkitExitFullscreen ? document.webkitExitFullscreen() : null);
+      if (p && typeof p.catch === 'function') p.catch(function () {});
+    } catch (e) {}
+  }
+  if (fsOK) {
+    fsRow.hidden = false;
+    fsBtn.addEventListener('click', function () {
+      if (fsEl()) { exitFs(); return; }
+      closeSheet();
+      enterFs();
+    });
+    document.addEventListener('fullscreenchange', fsLabel);
+    document.addEventListener('webkitfullscreenchange', fsLabel);
+  }
+
   el.gear.addEventListener('click', openSheet);
   el.close.addEventListener('click', closeSheet);
   el.scrim.addEventListener('click', closeSheet);
