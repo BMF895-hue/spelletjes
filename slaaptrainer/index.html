@@ -96,6 +96,8 @@ body.ready .dim { transition: opacity 0.6s ease; }
   opacity: 0.5;
   cursor: pointer;
 }
+/* na een tik: knop boven de demplaag, zodat hij ook bij 1% te vinden is */
+body.ui .top { position: relative; z-index: 6; }
 body.ui .top button { opacity: 1; }
 
 .stage {
@@ -129,7 +131,8 @@ body.ui .top button { opacity: 1; }
   letter-spacing: 0.04em;
   color: var(--fg-soft);
 }
-.foot.ask { color: var(--fg); }
+/* tik-melding boven de demplaag, anders is hij bij een lage stand onzichtbaar */
+.foot.ask { position: relative; z-index: 6; color: var(--fg-soft); }
 
 /* instellingenblad */
 .scrim { position: fixed; inset: 0; z-index: 9; background: rgba(0, 0, 0, 0.3); }
@@ -239,7 +242,7 @@ legend b { color: var(--sheet-fg); font-weight: 600; }
     <div class="range">
       <label for="nightLevel">Helderheid nacht</label>
       <output id="nightOut" for="nightLevel"></output>
-      <input type="range" id="nightLevel" min="20" max="100" step="5">
+      <input type="range" id="nightLevel" min="10" max="100" step="1" aria-describedby="nightOut">
     </div>
 
     <fieldset>
@@ -309,12 +312,17 @@ legend b { color: var(--sheet-fg); font-weight: 600; }
       dayStart:   validTime(s.dayStart)   ? s.dayStart   : DEF.dayStart,
       night: has(NIGHT, s.night) ? s.night : DEF.night,
       day:   has(DAY, s.day)     ? s.day   : DEF.day,
-      nightLevel: clamp(s.nightLevel === undefined ? NaN : Number(s.nightLevel), 20, 100, DEF.nightLevel),
+      nightLevel: clamp(s.nightLevel === undefined ? NaN : Number(s.nightLevel), 1, 100, DEF.nightLevel),
       dayLevel:   clamp(s.dayLevel === undefined ? NaN : Number(s.dayLevel), 20, 100, DEF.dayLevel),
       seconds: s.seconds === true
     };
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+  /* Nachtschuif: positie 10..100 wordt kwadratisch omgezet naar 1..100%.
+     Zo zit er veel ruimte in het lage deel (1-10%), waar het verschil in het donker het grootst is. */
+  function levelFromPos(s) { return Math.max(1, Math.min(100, Math.round(s * s / 100))); }
+  function posFromLevel(l) { return Math.max(10, Math.min(100, Math.round(Math.sqrt(l * 100)))); }
 
   var state = load();
   var forced = 'auto';
@@ -449,7 +457,7 @@ legend b { color: var(--sheet-fg); font-weight: 600; }
   function sync() {
     el.nightStart.value = state.nightStart;
     el.dayStart.value = state.dayStart;
-    el.nightLevel.value = state.nightLevel;
+    el.nightLevel.value = posFromLevel(state.nightLevel);
     el.dayLevel.value = state.dayLevel;
     el.nightOut.textContent = state.nightLevel + '%';
     el.dayOut.textContent = state.dayLevel + '%';
@@ -475,7 +483,14 @@ legend b { color: var(--sheet-fg); font-weight: 600; }
     if (validTime(el.dayStart.value)) { state.dayStart = el.dayStart.value; save(); }
     sync(); render();
   });
-  el.nightLevel.addEventListener('input', function () { state.nightLevel = clamp(Number(el.nightLevel.value), 20, 100, DEF.nightLevel); save(); sync(); render(); });
+  el.nightLevel.addEventListener('input', function () {
+    var lvl = levelFromPos(Number(el.nightLevel.value));
+    state.nightLevel = isFinite(lvl) ? lvl : DEF.nightLevel;
+    save();
+    // schuif niet terugzetten tijdens het slepen; alleen het getal bijwerken
+    el.nightOut.textContent = state.nightLevel + '%';
+    render();
+  });
   el.dayLevel.addEventListener('input', function () { state.dayLevel = clamp(Number(el.dayLevel.value), 20, 100, DEF.dayLevel); save(); sync(); render(); });
   el.seconds.addEventListener('change', function () { state.seconds = el.seconds.checked; save(); render(); });
 
