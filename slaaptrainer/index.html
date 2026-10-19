@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="nl" data-mode="day">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Slaaptrainer</title>
+<meta name="theme-color" content="#000000" id="themeColor">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Slaaptrainer">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<style>
+@font-face{font-family:"Chivo Mono";font-style:normal;font-weight:300;font-display:block;src:url("fonts/chivo-mono-latin-300-normal.woff2") format("woff2")}
+@font-face{font-family:"Hanken Grotesk";font-style:normal;font-weight:400;font-display:swap;src:url("fonts/hanken-grotesk-latin-400-normal.woff2") format("woff2")}
+@font-face{font-family:"Hanken Grotesk";font-style:normal;font-weight:600;font-display:swap;src:url("fonts/hanken-grotesk-latin-600-normal.woff2") format("woff2")}
+
+/* Layout: één scherm. Grote klok in het midden, instellingen achter een knop rechtsboven, als blad onderin. */
+:root {
+  --font-clock: "Chivo Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-ui: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* dagstand (standaard); script overschrijft --bg/--fg met de gekozen kleur */
+  --bg: #cfe8c9;
+  --fg: #1f3a1c;
+  --fg-soft: rgba(31, 58, 28, 0.66);
+  --dim: 0;
+
+  --sheet-bg: #fbfaf5;
+  --sheet-fg: #23301f;
+  --sheet-soft: #56614f;
+  --sheet-line: #c9cfc0;
+  --accent: #2f6b2a;
+  --on-accent: #ffffff;
+}
+:root[data-mode="night"] {
+  --bg: #000000;
+  --fg: #d98a2b;
+  --fg-soft: rgba(217, 138, 43, 0.66);
+
+  --sheet-bg: #0a0604;
+  --sheet-fg: #b98240;
+  --sheet-soft: #9a6c32;
+  --sheet-line: #3a2410;
+  --accent: #b8761f;
+  --on-accent: #0a0604;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+html { background: var(--bg); }
+body {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+}
+body.ready { transition: background-color 1.5s ease, color 1.5s ease; }
+
+button { font-family: inherit; }
+:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+
+/* demplaag over de hele pagina; schuiver regelt de dekking */
+.dim {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  opacity: var(--dim);
+  pointer-events: none;
+  z-index: 5;
+}
+body.ready .dim { transition: opacity 0.6s ease; }
+
+.top { flex: none; display: flex; justify-content: flex-end; }
+.top button {
+  width: 48px; height: 48px;
+  display: grid; place-items: center;
+  border: 0; background: none; padding: 0;
+  color: var(--fg-soft);
+  opacity: 0.5;
+  cursor: pointer;
+}
+body.ui .top button { opacity: 1; }
+
+.stage {
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 2vh;
+}
+.clock {
+  font-family: var(--font-clock);
+  font-weight: 300;
+  font-size: min(28vw, 42vh);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.clock.sec { font-size: min(17vw, 30vh); }
+.date {
+  font-size: clamp(13px, 3.4vw, 22px);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-soft);
+}
+.foot {
+  flex: none;
+  min-height: 44px;
+  display: grid; place-items: center;
+  text-align: center;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  color: var(--fg-soft);
+}
+.foot.ask { color: var(--fg); }
+
+/* instellingenblad */
+.scrim { position: fixed; inset: 0; z-index: 9; background: rgba(0, 0, 0, 0.3); }
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  z-index: 10;
+  max-height: 84%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--sheet-bg);
+  color: var(--sheet-fg);
+  border-top: 1px solid var(--sheet-line);
+  padding: 16px max(16px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  -webkit-user-select: auto; user-select: auto;
+}
+.sheet :focus-visible { outline-color: var(--accent); }
+.sheet-inner { max-width: 520px; margin: 0 auto; display: grid; gap: 22px; }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sheet-head h2 { margin: 0; font-size: 18px; font-weight: 600; }
+.done {
+  min-height: 44px; padding: 0 18px;
+  border: 1px solid var(--sheet-line); background: transparent;
+  color: var(--sheet-fg); font-size: 16px; cursor: pointer;
+}
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+legend { padding: 0; margin-bottom: 6px; font-size: 13px; color: var(--sheet-soft); }
+legend b { color: var(--sheet-fg); font-weight: 600; }
+
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.t { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--sheet-soft); min-width: 0; }
+.t input {
+  font: inherit; font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  color: var(--sheet-fg);
+  background: transparent;
+  border: 1px solid var(--sheet-line);
+  border-radius: 0;
+  padding: 10px 12px;
+  min-height: 48px; width: 100%; min-width: 0;
+  -webkit-appearance: none; appearance: none;
+}
+
+.swatches { display: flex; flex-wrap: wrap; gap: 4px; }
+.sw {
+  width: 48px; height: 48px; padding: 0; border: 0;
+  background: none; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer;
+}
+.sw span { display: block; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--sheet-line); }
+.sw[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
+
+.range { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; }
+.range label { font-size: 15px; }
+.range output { font-variant-numeric: tabular-nums; color: var(--sheet-soft); }
+.range input { grid-column: 1 / -1; width: 100%; height: 32px; margin: 0; accent-color: var(--accent); }
+
+.check { display: flex; align-items: center; gap: 12px; min-height: 44px; font-size: 16px; }
+.check input { width: 22px; height: 22px; margin: 0; accent-color: var(--accent); }
+
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--sheet-line); }
+.seg button { min-height: 44px; border: 0; background: transparent; color: var(--sheet-fg); font-size: 15px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--sheet-line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+
+.hint { margin: 0; font-size: 13px; line-height: 1.5; color: var(--sheet-soft); max-width: 65ch; }
+.hint.warn { color: var(--sheet-fg); }
+
+@media (prefers-reduced-motion: reduce) {
+  body.ready, body.ready .dim { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <button id="gear" type="button" aria-label="Instellingen" aria-expanded="false" aria-controls="sheet">
+    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>
+  </button>
+</header>
+
+<main class="stage" id="stage">
+  <div class="clock" id="clock">00:00</div>
+  <div class="date" id="date"></div>
+</main>
+
+<footer class="foot" id="foot"></footer>
+
+<div class="dim" id="dim" aria-hidden="true"></div>
+
+<div class="scrim" id="scrim" hidden></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden>
+  <div class="sheet-inner">
+    <div class="sheet-head">
+      <h2 id="sheet-title">Instellingen</h2>
+      <button class="done" id="close" type="button">Klaar</button>
+    </div>
+
+    <div class="pair">
+      <label class="t" for="nightStart">Nachtstand vanaf<input type="time" id="nightStart"></label>
+      <label class="t" for="dayStart">Dagstand vanaf<input type="time" id="dayStart"></label>
+    </div>
+
+    <fieldset>
+      <legend>Letterkleur nacht: <b id="nightName"></b></legend>
+      <div class="swatches" id="nightSwatches"></div>
+    </fieldset>
+    <div class="range">
+      <label for="nightLevel">Helderheid nacht</label>
+      <output id="nightOut" for="nightLevel"></output>
+      <input type="range" id="nightLevel" min="20" max="100" step="5">
+    </div>
+
+    <fieldset>
+      <legend>Achtergrond dag: <b id="dayName"></b></legend>
+      <div class="swatches" id="daySwatches"></div>
+    </fieldset>
+    <div class="range">
+      <label for="dayLevel">Helderheid dag</label>
+      <output id="dayOut" for="dayLevel"></output>
+      <input type="range" id="dayLevel" min="20" max="100" step="5">
+    </div>
+
+    <p class="hint">De helderheid van je telefoon stel je zelf in, een webpagina kan die niet aanpassen. Deze regelaars maken alleen de kleuren op de pagina zachter.</p>
+
+    <label class="check" for="seconds"><input type="checkbox" id="seconds"> Seconden tonen</label>
+
+    <fieldset>
+      <legend>Standen bekijken</legend>
+      <div class="seg" id="modeSeg">
+        <button type="button" data-mode="auto" aria-pressed="true">Automatisch</button>
+        <button type="button" data-mode="night" aria-pressed="false">Nacht</button>
+        <button type="button" data-mode="day" aria-pressed="false">Dag</button>
+      </div>
+      <p class="hint" style="margin-top:8px">Nacht en Dag zijn een voorbeeld en springen na 5 minuten terug naar automatisch.</p>
+    </fieldset>
+
+    <p class="hint warn" id="wakeHint" hidden></p>
+  </div>
+</section>
+
+<script>
+(function () {
+  'use strict';
+
+  var KEY = 'slaaptrainer.v1';
+  var NIGHT = [
+    { id: 'amber',  name: 'Amber',        fg: '#d98a2b' },
+    { id: 'oranje', name: 'Oranje',       fg: '#e0663a' },
+    { id: 'rood',   name: 'Rood',         fg: '#c23a2e' },
+    { id: 'wit',    name: 'Gedempt wit',  fg: '#a39a8a' }
+  ];
+  var DAY = [
+    { id: 'groen',  name: 'Groen',  bg: '#cfe8c9', fg: '#1f3a1c' },
+    { id: 'geel',   name: 'Geel',   bg: '#f3e7b0', fg: '#3a3210' },
+    { id: 'blauw',  name: 'Blauw',  bg: '#cfe0ee', fg: '#17293a' },
+    { id: 'perzik', name: 'Perzik', bg: '#f4d6bd', fg: '#3d2412' }
+  ];
+  var DEF = { nightStart: '19:30', dayStart: '07:00', night: 'amber', day: 'groen', nightLevel: 60, dayLevel: 100, seconds: false };
+
+  function $(id) { return document.getElementById(id); }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function validTime(v) { return typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v); }
+  function toMin(v) { var p = v.split(':'); return (+p[0]) * 60 + (+p[1]); }
+  function clamp(n, a, b, d) { return isFinite(n) ? Math.min(b, Math.max(a, n)) : d; }
+  function find(list, id) { for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i]; return list[0]; }
+  function has(list, id) { for (var i = 0; i < list.length; i++) if (list[i].id === id) return true; return false; }
+  function rgba(hex, a) {
+    var n = parseInt(hex.slice(1), 16);
+    return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
+
+  function load() {
+    var s = {};
+    try { s = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { s = {}; }
+    return {
+      nightStart: validTime(s.nightStart) ? s.nightStart : DEF.nightStart,
+      dayStart:   validTime(s.dayStart)   ? s.dayStart   : DEF.dayStart,
+      night: has(NIGHT, s.night) ? s.night : DEF.night,
+      day:   has(DAY, s.day)     ? s.day   : DEF.day,
+      nightLevel: clamp(s.nightLevel === undefined ? NaN : Number(s.nightLevel), 20, 100, DEF.nightLevel),
+      dayLevel:   clamp(s.dayLevel === undefined ? NaN : Number(s.dayLevel), 20, 100, DEF.dayLevel),
+      seconds: s.seconds === true
+    };
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+  var state = load();
+  var forced = 'auto';
+  var previewTimer = null;
+  var sig = '';
+  var uiTimer = null;
+
+  var el = {
+    clock: $('clock'), date: $('date'), foot: $('foot'), stage: $('stage'),
+    gear: $('gear'), sheet: $('sheet'), scrim: $('scrim'), close: $('close'),
+    nightStart: $('nightStart'), dayStart: $('dayStart'),
+    nightName: $('nightName'), dayName: $('dayName'),
+    nightSwatches: $('nightSwatches'), daySwatches: $('daySwatches'),
+    nightLevel: $('nightLevel'), dayLevel: $('dayLevel'),
+    nightOut: $('nightOut'), dayOut: $('dayOut'),
+    seconds: $('seconds'), modeSeg: $('modeSeg'), wakeHint: $('wakeHint'),
+    themeColor: $('themeColor')
+  };
+
+  /* ---- stand bepalen ---- */
+  function isNight(t) {
+    var n = toMin(state.nightStart), d = toMin(state.dayStart);
+    if (n === d) return false;
+    return n > d ? (t >= n || t < d) : (t >= n && t < d);
+  }
+
+  function applyTheme(night) {
+    var bg, fg, level;
+    if (night) { var p = find(NIGHT, state.night); bg = '#000000'; fg = p.fg; level = state.nightLevel; }
+    else { var d = find(DAY, state.day); bg = d.bg; fg = d.fg; level = state.dayLevel; }
+    var key = (night ? 'n' : 'd') + bg + fg + level;
+    if (key === sig) return;
+    sig = key;
+    var r = document.documentElement;
+    r.setAttribute('data-mode', night ? 'night' : 'day');
+    r.style.setProperty('--bg', bg);
+    r.style.setProperty('--fg', fg);
+    r.style.setProperty('--fg-soft', rgba(fg, 0.66));
+    r.style.setProperty('--dim', String((100 - level) / 100));
+    el.themeColor.setAttribute('content', bg);
+  }
+
+  /* ---- scherm aanhouden ----
+     Safari op iPhone staat dit alleen toe direct na een tik op het scherm.
+     Daarom: bij openen proberen (werkt op Android/desktop), en anders bij de eerstvolgende tik.
+     Status: 'on' = scherm blijft aan, 'tap' = tik nodig, 'denied' = geweigerd ondanks tik,
+     'unsupported' = browser kan het niet. */
+  var wake = 'tap';
+  var lock = null;
+  var busy = false;
+
+  function acquire(fromTap) {
+    if (busy || lock) return;
+    if (!('wakeLock' in navigator)) { wake = 'unsupported'; render(); return; }
+    if (document.visibilityState !== 'visible') return;
+    busy = true;
+    navigator.wakeLock.request('screen').then(function (l) {
+      busy = false;
+      lock = l; wake = 'on';
+      l.addEventListener('release', function () {
+        lock = null;
+        wake = 'tap';
+        if (document.visibilityState === 'visible') acquire(false);
+        render();
+      });
+      render();
+    }).catch(function () {
+      busy = false;
+      wake = fromTap ? 'denied' : 'tap';
+      render();
+    });
+  }
+  function onTap() { if (!lock) acquire(true); }
+  // 'click' en 'touchend' gelden in Safari als echte tik; 'pointerdown'/'touchstart' niet altijd.
+  document.addEventListener('click', onTap, true);
+  document.addEventListener('touchend', onTap, { capture: true, passive: true });
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') { render(); acquire(false); }
+  });
+
+  function caption(night) {
+    if (forced !== 'auto') return { text: 'Voorbeeld van ' + (night ? 'nachtstand' : 'dagstand'), ask: false };
+    if (wake === 'tap') return { text: 'Tik op het scherm om het aan te houden', ask: true };
+    var n = toMin(state.nightStart), d = toMin(state.dayStart);
+    var base = n === d ? 'Dagstand' : (night ? 'Nachtstand tot ' + state.dayStart : 'Dagstand tot ' + state.nightStart);
+    var w = wake === 'on' ? ' · scherm blijft aan' : ' · scherm kan uitgaan';
+    return { text: base + w, ask: false };
+  }
+
+  function render() {
+    var now = new Date();
+    var t = now.getHours() * 60 + now.getMinutes();
+    var night = forced === 'auto' ? isNight(t) : forced === 'night';
+    var txt = pad(now.getHours()) + ':' + pad(now.getMinutes()) + (state.seconds ? ':' + pad(now.getSeconds()) : '');
+    if (el.clock.textContent !== txt) el.clock.textContent = txt;
+    el.clock.classList.toggle('sec', state.seconds);
+    var ds = now.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
+    if (el.date.textContent !== ds) el.date.textContent = ds;
+    applyTheme(night);
+    var c = caption(night);
+    if (el.foot.textContent !== c.text) el.foot.textContent = c.text;
+    el.foot.classList.toggle('ask', c.ask);
+    var msg = '';
+    if (wake === 'unsupported') msg = 'Deze browser kan het scherm niet aan houden. Zet in Instellingen > Scherm en helderheid > Automatische vergrendeling op Nooit, of gebruik Begeleide toegang.';
+    else if (wake === 'denied') msg = 'Je telefoon weigerde het scherm aan te houden. Zet in Instellingen > Scherm en helderheid > Automatische vergrendeling op Nooit, of gebruik Begeleide toegang.';
+    el.wakeHint.textContent = msg;
+    el.wakeHint.hidden = !msg;
+  }
+
+  function tick() {
+    render();
+    setTimeout(tick, 1000 - (Date.now() % 1000) + 15);
+  }
+
+  /* ---- instellingen ---- */
+  function buildSwatches(box, list, key, isDay) {
+    list.forEach(function (p) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'sw';
+      b.title = p.name;
+      b.setAttribute('aria-label', p.name);
+      b.setAttribute('data-id', p.id);
+      var i = document.createElement('span');
+      i.style.background = isDay ? p.bg : p.fg;
+      b.appendChild(i);
+      b.addEventListener('click', function () { state[key] = p.id; save(); sync(); render(); });
+      box.appendChild(b);
+    });
+  }
+
+  function sync() {
+    el.nightStart.value = state.nightStart;
+    el.dayStart.value = state.dayStart;
+    el.nightLevel.value = state.nightLevel;
+    el.dayLevel.value = state.dayLevel;
+    el.nightOut.textContent = state.nightLevel + '%';
+    el.dayOut.textContent = state.dayLevel + '%';
+    el.seconds.checked = state.seconds;
+    el.nightName.textContent = find(NIGHT, state.night).name;
+    el.dayName.textContent = find(DAY, state.day).name;
+    [].forEach.call(el.nightSwatches.children, function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-id') === state.night)); });
+    [].forEach.call(el.daySwatches.children, function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-id') === state.day)); });
+  }
+
+  function syncMode() {
+    [].forEach.call(el.modeSeg.children, function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-mode') === forced)); });
+  }
+
+  buildSwatches(el.nightSwatches, NIGHT, 'night', false);
+  buildSwatches(el.daySwatches, DAY, 'day', true);
+
+  el.nightStart.addEventListener('change', function () {
+    if (validTime(el.nightStart.value)) { state.nightStart = el.nightStart.value; save(); }
+    sync(); render();
+  });
+  el.dayStart.addEventListener('change', function () {
+    if (validTime(el.dayStart.value)) { state.dayStart = el.dayStart.value; save(); }
+    sync(); render();
+  });
+  el.nightLevel.addEventListener('input', function () { state.nightLevel = clamp(Number(el.nightLevel.value), 20, 100, DEF.nightLevel); save(); sync(); render(); });
+  el.dayLevel.addEventListener('input', function () { state.dayLevel = clamp(Number(el.dayLevel.value), 20, 100, DEF.dayLevel); save(); sync(); render(); });
+  el.seconds.addEventListener('change', function () { state.seconds = el.seconds.checked; save(); render(); });
+
+  [].forEach.call(el.modeSeg.children, function (b) {
+    b.addEventListener('click', function () {
+      forced = b.getAttribute('data-mode');
+      clearTimeout(previewTimer);
+      if (forced !== 'auto') previewTimer = setTimeout(function () { forced = 'auto'; syncMode(); render(); }, 300000);
+      syncMode(); render();
+    });
+  });
+
+  function openSheet() {
+    el.sheet.hidden = false; el.scrim.hidden = false;
+    el.gear.setAttribute('aria-expanded', 'true');
+    sync(); syncMode(); el.close.focus();
+  }
+  function closeSheet() {
+    el.sheet.hidden = true; el.scrim.hidden = true;
+    el.gear.setAttribute('aria-expanded', 'false');
+    el.gear.focus();
+  }
+  el.gear.addEventListener('click', openSheet);
+  el.close.addEventListener('click', closeSheet);
+  el.scrim.addEventListener('click', closeSheet);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !el.sheet.hidden) closeSheet(); });
+
+  // tik op het scherm: instellingenknop even duidelijker zichtbaar
+  el.stage.addEventListener('click', function () {
+    document.body.classList.add('ui');
+    clearTimeout(uiTimer);
+    uiTimer = setTimeout(function () { document.body.classList.remove('ui'); }, 5000);
+  });
+
+  sync(); syncMode(); render(); tick(); acquire(false);
+  requestAnimationFrame(function () { requestAnimationFrame(function () { document.body.classList.add('ready'); }); });
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+  }
+})();
+</script>
+</body>
+</html>
