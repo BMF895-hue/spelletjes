@@ -257,7 +257,7 @@ input:focus-visible{outline-offset:1px}
 .die{width:var(--die,46px);height:var(--die,46px);perspective:340px;flex:none}
 .die .tilt{width:100%;height:100%;transform-style:preserve-3d;transform:rotateX(-16deg) rotateY(-24deg)}
 .die .cube{position:relative;width:100%;height:100%;transform-style:preserve-3d;will-change:transform}
-.die .face{position:absolute;inset:0;border-radius:17%;backface-visibility:hidden;
+.die .face{position:absolute;inset:0;border-radius:17%;-webkit-backface-visibility:hidden;backface-visibility:hidden;
   background:radial-gradient(circle at 32% 28%, #FFFFFF, #F4EEDC 70%, #E7DDC2);
   box-shadow:inset 0 0 0 1.3px rgba(60,48,20,.45), inset -2px -3px 5px rgba(120,96,40,.18)}
 .die .face svg{position:absolute;inset:0;width:100%;height:100%}
@@ -417,6 +417,33 @@ input:focus-visible{outline-offset:1px}
   .sheet,.win-card{animation:none}
   .btn,.roll{transition:none}
 }
+
+/* ---------- pawn choice in setup ---------- */
+.namerow{grid-template-columns:48px 1fr}
+.tokbtn{width:48px;height:52px;padding:2px 4px 0;border:0;background:none;cursor:pointer;position:relative;display:flex;align-items:flex-end;justify-content:center;
+  touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+.tokbtn .tok{width:36px;height:45px;margin:0}
+.tokbtn::after{content:"";position:absolute;right:0;bottom:2px;width:14px;height:14px;border-radius:50%;
+  background:var(--ink) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M4 5.5l3 3 3-3' fill='none' stroke='%23fff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/100% no-repeat;
+  box-shadow:0 0 0 2px var(--panel)}
+.pick-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:4px 0 14px}
+.pick-grid button{position:relative;min-height:112px;padding:10px 6px 8px;border:0;border-radius:3px;background:var(--panel-2);color:var(--ink);
+  box-shadow:inset 0 0 0 1.5px var(--line);display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;font:inherit;
+  touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+.pick-grid button .tok{width:44px;height:55px}
+.pick-grid button b{font-size:15px;font-weight:700}
+.pick-grid button small{font-size:13px;color:var(--ink-soft);min-height:1.2em;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pick-grid button[aria-pressed="true"]{background:var(--panel);box-shadow:inset 0 0 0 3px var(--ink)}
+.pick-grid button[aria-pressed="true"] small{color:var(--ink);font-weight:700}
+
+/* ---------- big dice thrown onto the board ---------- */
+#dicestage{position:absolute;inset:0;pointer-events:none;z-index:110}
+.bigdie{position:absolute;width:var(--die);height:var(--die)}
+.bigdie .scene{position:absolute;inset:0;will-change:transform,opacity}
+.bigdie .die{width:100%;height:100%;perspective:700px}
+.bigdie .shade{position:absolute;left:4%;right:4%;bottom:-16%;height:26%;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(11,21,51,.42),rgba(11,21,51,0));will-change:transform,opacity}
+#pick .confirm-actions{grid-template-columns:minmax(0,1fr);display:grid}
 </style>
 <div id="app">
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
@@ -426,6 +453,9 @@ input:focus-visible{outline-offset:1px}
   <linearGradient id="pg1" x1="0" x2="1"><stop offset="0" stop-color="#FFE59A"/><stop offset=".42" stop-color="#F2B42B"/><stop offset="1" stop-color="#A9730A"/></linearGradient>
   <linearGradient id="pg2" x1="0" x2="1"><stop offset="0" stop-color="#4FBC93"/><stop offset=".42" stop-color="#117A57"/><stop offset="1" stop-color="#083F2D"/></linearGradient>
   <linearGradient id="pg3" x1="0" x2="1"><stop offset="0" stop-color="#B88BE0"/><stop offset=".42" stop-color="#7A40B0"/><stop offset="1" stop-color="#46206B"/></linearGradient>
+  <linearGradient id="pg4" x1="0" x2="1"><stop offset="0" stop-color="#6E95E0"/><stop offset=".42" stop-color="#2551A8"/><stop offset="1" stop-color="#132C66"/></linearGradient>
+  <linearGradient id="pg5" x1="0" x2="1"><stop offset="0" stop-color="#FFC58C"/><stop offset=".42" stop-color="#E0731F"/><stop offset="1" stop-color="#8E3E0A"/></linearGradient>
+  <linearGradient id="pgw" x1="0" x2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".55" stop-color="#F3F5FA"/><stop offset="1" stop-color="#C9D3E8"/></linearGradient>
   <radialGradient id="pdisc" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#EDE4CC"/></radialGradient>
 
   <!-- the four turned playing pieces (viewBox 0 0 40 50; the initial is added on top) -->
@@ -471,6 +501,30 @@ input:focus-visible{outline-offset:1px}
    <circle cx="31.4" cy="9.8" r="2.3" fill="#F2B42B" stroke="#1A1424" stroke-width="1.2"/>
    <ellipse cx="20" cy="23.6" rx="9.2" ry="2.5" fill="url(#pg3)" stroke="#1A1424" stroke-width="1.5"/>
    <circle cx="20" cy="33.2" r="7.6" fill="url(#pdisc)" stroke="#1A1424" stroke-width="1.3"/>
+  </symbol>
+  <symbol id="pc-4" viewBox="0 0 40 50">
+   <ellipse cx="20" cy="46.4" rx="16.5" ry="3.3" fill="#0B1533" opacity=".3"/>
+   <path d="M5.4 41.2v2.6a14.6 4.4 0 0 0 29.2 0v-2.6z" fill="#0E1F4F" stroke="#1A1424" stroke-width="1.5" stroke-linejoin="round"/>
+   <ellipse cx="20" cy="41.2" rx="14.6" ry="4.4" fill="url(#pg4)" stroke="#1A1424" stroke-width="1.5"/>
+   <path d="M9 41c1.8-6.6 4.2-11.6 5.6-16.6h10.8c1.4 5 3.8 10 5.6 16.6z" fill="url(#pg4)" stroke="#1A1424" stroke-width="1.6" stroke-linejoin="round"/>
+   <path d="M11.4 24.4c-.4-4.4 3-6.6 3.8-8.2.9-1.9-.3-4.6-.3-7.2 0-3 2.1-5 4.6-5 2.4 0 3.9 1.9 3.4 4.4-.5 2.6-2.2 4.4-1.7 7.4 4.6.4 8.4 2.2 10 5.6l-2.6.6c.2 1.1.1 1.9-.3 2.4z" fill="url(#pgw)" stroke="#1A1424" stroke-width="1.6" stroke-linejoin="round"/>
+   <path d="M15.2 7.6L9.6 9.2l5.5 1.4z" fill="#F08A24" stroke="#1A1424" stroke-width="1.2" stroke-linejoin="round"/>
+   <circle cx="18.6" cy="7.4" r="1.2" fill="#1A1424"/>
+   <path d="M21.6 20.4c2.6 1.6 5.2 1.8 7.6 1" fill="none" stroke="#7F93C2" stroke-width="1.2" stroke-linecap="round"/>
+   <circle cx="20" cy="33.4" r="7.6" fill="url(#pdisc)" stroke="#1A1424" stroke-width="1.3"/>
+  </symbol>
+  <symbol id="pc-5" viewBox="0 0 40 50">
+   <ellipse cx="20" cy="46.4" rx="16.5" ry="3.3" fill="#0B1533" opacity=".3"/>
+   <path d="M5.4 41.2v2.6a14.6 4.4 0 0 0 29.2 0v-2.6z" fill="#6A2E06" stroke="#1A1424" stroke-width="1.5" stroke-linejoin="round"/>
+   <ellipse cx="20" cy="41.2" rx="14.6" ry="4.4" fill="url(#pg5)" stroke="#1A1424" stroke-width="1.5"/>
+   <path d="M10.4 41l3.8-24h11.6l3.8 24z" fill="url(#pg5)" stroke="#1A1424" stroke-width="1.6" stroke-linejoin="round"/>
+   <path d="M13.2 17.4c1.2-4.2 3.6-6.2 6.8-6.2s5.6 2 6.8 6.2z" fill="#8E3E0A" stroke="#1A1424" stroke-width="1.5" stroke-linejoin="round"/>
+   <g transform="rotate(38 20 12.6)" stroke="#1A1424" stroke-width="1.3" stroke-linejoin="round">
+    <path d="M18.4 1h3.2v10h-3.2zM18.4 14.2h3.2v10h-3.2zM8.4 11h10v3.2h-10zM21.6 11h10v3.2h-10z" fill="#FBF6E9"/>
+    <path d="M18.4 4.2h3.2M18.4 7.4h3.2M18.4 17.4h3.2M18.4 20.6h3.2M11.6 11v3.2M14.8 11v3.2M25.2 11v3.2M28.4 11v3.2" fill="none" stroke-width=".9"/>
+   </g>
+   <circle cx="20" cy="12.6" r="2.2" fill="#F2B42B" stroke="#1A1424" stroke-width="1.2"/>
+   <circle cx="20" cy="32.2" r="7.6" fill="url(#pdisc)" stroke="#1A1424" stroke-width="1.3"/>
   </symbol>
 
   <!-- square vignettes (viewBox 0 0 40 40), drawn like small hand-coloured engravings -->
@@ -596,7 +650,7 @@ input:focus-visible{outline-offset:1px}
   <button class="iconbtn" type="button" id="btn-sound" aria-label="Geluid uit" aria-pressed="false"><svg aria-hidden="true"><use href="#u-sound"/></svg></button>
  </div>
  <div class="board-wrap" id="board-wrap">
-  <div class="board" id="board"><div id="board-art"></div><div id="pawns"></div><div id="fx"></div></div>
+  <div class="board" id="board"><div id="board-art"></div><div id="pawns"></div><div id="fx"></div><div id="dicestage" aria-hidden="true"></div></div>
  </div>
  <div class="players" id="players"></div>
  <div class="say">
@@ -638,6 +692,15 @@ input:focus-visible{outline-offset:1px}
 </div>
 
 <!-- ============ STOP CONFIRM ============ -->
+<div class="overlay" id="pick" hidden role="dialog" aria-modal="true" aria-labelledby="pick-h">
+ <div class="sheet">
+  <div class="sheet-head"><h2 id="pick-h">Kies je pion</h2></div>
+  <p class="lead" id="pick-lead">Welke pion wil je?</p>
+  <div class="pick-grid" id="pick-grid"></div>
+  <div class="confirm-actions"><button class="btn btn-quiet" type="button" id="btn-pick-close">Klaar</button></div>
+ </div>
+</div>
+
 <div class="overlay" id="confirm" hidden role="dialog" aria-modal="true" aria-labelledby="confirm-h">
  <div class="sheet">
   <div class="sheet-head"><h2 id="confirm-h">Spel stoppen?</h2></div>
@@ -1008,9 +1071,12 @@ var SEATS = [
   { color: '#C63527', on: '#FFFFFF', piece: 'pion' },
   { color: '#F2B42B', on: '#13275A', piece: 'toren' },
   { color: '#117A57', on: '#FFFFFF', piece: 'mijter' },
-  { color: '#7A40B0', on: '#FFFFFF', piece: 'kroon' }
+  { color: '#7A40B0', on: '#FFFFFF', piece: 'kroon' },
+  { color: '#2551A8', on: '#FFFFFF', piece: 'gans' },
+  { color: '#E0731F', on: '#13275A', piece: 'molen' }
 ];
-var DISC_Y = [32.8, 31.4, 33, 33.2];
+var PIECE_NAMES = ['Pion', 'Toren', 'Mijter', 'Kroon', 'Gans', 'Molen'];
+var DISC_Y = [32.8, 31.4, 33, 33.2, 33.4, 32.2];
 var DEFAULT_NAMES = ['Anna', 'Bram', 'Cato', 'Daan'];
 function initial(name, seat) { var s = (name || '').trim(); return s ? s.charAt(0).toUpperCase() : String(seat + 1); }
 function pieceSVG(seat, name) {
@@ -1259,14 +1325,14 @@ var Snd = (function () {
 })();
 
 /* ------------------------------------------------------------ app state */
-var app = { names: DEFAULT_NAMES.slice(), count: 2, rule: false, muted: false, game: null, turns: 0, rolls: [0, 0, 0, 0], last: null, log: [], screen: 'setup' };
-var speed = 1, ff = false, busy = false, forced = null, mover = null, turnGen = 0;
+var app = { names: DEFAULT_NAMES.slice(), seats: [0, 1, 2, 3], count: 2, rule: false, muted: false, game: null, turns: 0, rolls: [0, 0, 0, 0], last: null, log: [], screen: 'setup' };
+var skipAfter = 0, speed = 1, ff = false, busy = false, forced = null, mover = null, turnGen = 0;
 var geo = null, pawnEls = [], pawnPos = [], disp = [], boardKey = '';
 var CANCEL = { cancelled: true };
 
 function persist() {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ v: 1, names: app.names, count: app.count, rule: app.rule, muted: app.muted,
+    localStorage.setItem(KEY, JSON.stringify({ v: 1, names: app.names, seats: app.seats, count: app.count, rule: app.rule, muted: app.muted,
       game: app.game, turns: app.turns, rolls: app.rolls, last: app.last,
       log: app.game ? app.log : [] }));
   } catch (e) {}
@@ -1275,6 +1341,7 @@ function loadStore() { try { var s = localStorage.getItem(KEY); return s ? JSON.
 function adopt(st) {
   if (!st || typeof st !== 'object') return;
   if (Array.isArray(st.names)) for (var i = 0; i < 4; i++) if (typeof st.names[i] === 'string') app.names[i] = st.names[i].slice(0, NAME_MAX);
+  if (Array.isArray(st.seats) && st.seats.length === 4 && st.seats.every(function (s, i, a) { return s === (s | 0) && s >= 0 && s < SEATS.length && a.indexOf(s) === i; })) app.seats = st.seats.slice();
   if (st.count >= 2 && st.count <= 4) app.count = st.count;
   app.rule = !!st.rule; app.muted = !!st.muted;
   app.turns = st.turns | 0; app.last = Array.isArray(st.last) ? st.last : null;
@@ -1287,7 +1354,9 @@ function pname(i) { var p = app.game && app.game.players[i]; return (p && p.name
 function where(n) { return isStart(n) ? 'Start' : 'vakje ' + n; }
 
 /* ------------------------------------------------------------ timing (cancellable) */
-function dur(ms) { return (ff || speed === 0) ? 0 : ms * speed * (reduceMotion ? 0.55 : 1); }
+// PACE: everything plays calmly enough to follow; the dice have their own fixed timing
+var PACE = 1.7;
+function dur(ms) { return (ff || speed === 0) ? 0 : ms * speed * PACE; }
 function alive(gen) { if (gen !== turnGen) throw CANCEL; }
 function wait(ms) {
   var d = dur(ms), gen = turnGen;
@@ -1319,7 +1388,7 @@ function ease(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 function renderNames() {
   var box = $('names'), html = '';
   for (var i = 0; i < app.count; i++) {
-    html += '<div class="namerow"><span class="tok" id="ntok-' + i + '">' + pieceSVG(i, app.names[i]) + '</span>' +
+    html += '<div class="namerow"><button class="tokbtn" type="button" id="ntok-' + i + '" aria-label="Kies een pion voor speler ' + (i + 1) + '"><span class="tok">' + pieceSVG(app.seats[i], app.names[i]) + '</span></button>' +
       '<label class="sr" for="name-' + i + '">Naam speler ' + (i + 1) + '</label>' +
       '<input id="name-' + i + '" type="text" maxlength="' + NAME_MAX + '" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done" value="' + esc(app.names[i]) + '" placeholder="Speler ' + (i + 1) + '"></div>';
   }
@@ -1327,11 +1396,33 @@ function renderNames() {
   for (i = 0; i < app.count; i++) {
     (function (i) {
       var inp = $('name-' + i);
-      inp.addEventListener('input', function () { app.names[i] = inp.value.slice(0, NAME_MAX); $('ntok-' + i).innerHTML = pieceSVG(i, app.names[i]); persist(); });
+      inp.addEventListener('input', function () { app.names[i] = inp.value.slice(0, NAME_MAX); $('ntok-' + i).firstChild.innerHTML = pieceSVG(app.seats[i], app.names[i]); persist(); });
+      $('ntok-' + i).addEventListener('click', function () { openPicker(i); });
       inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') inp.blur(); });
     })(i);
   }
   [2, 3, 4].forEach(function (n) { $('count-' + n).setAttribute('aria-checked', String(n === app.count)); $('count-' + n).tabIndex = n === app.count ? 0 : -1; });
+}
+var pickFor = 0;
+function openPicker(i) { pickFor = i; renderPicker(); openOverlay('pick'); }
+function renderPicker() {
+  var i = pickFor, nm = (app.names[i] || '').trim() || ('Speler ' + (i + 1));
+  $('pick-lead').textContent = 'Welke pion wil ' + fitText(nm, 220, '400 17px Figtree, sans-serif') + '?';
+  var html = '';
+  for (var s = 0; s < SEATS.length; s++) {
+    var owner = app.seats.indexOf(s), taken = owner >= 0 && owner < app.count && owner !== i;
+    var who = owner === i ? 'Gekozen' : taken ? ((app.names[owner] || '').trim() || ('Speler ' + (owner + 1))) : '';
+    html += '<button type="button" data-seat="' + s + '" aria-pressed="' + (owner === i) + '"' + (taken ? ' aria-label="' + PIECE_NAMES[s] + ', nu van ' + esc(who) + '. Tik om te ruilen."' : '') + '>' +
+      '<span class="tok">' + pieceSVG(s, owner === i || !taken ? nm : who) + '</span><b>' + PIECE_NAMES[s] + '</b><small>' + (taken ? 'van ' + esc(fitText(who, 90, '400 13px Figtree, sans-serif')) : who) + '</small></button>';
+  }
+  $('pick-grid').innerHTML = html;
+}
+function choosePiece(s) {
+  var i = pickFor, j = app.seats.indexOf(s);
+  if (j === i) { closeOverlay('pick'); return; }
+  if (j >= 0) app.seats[j] = app.seats[i];   // taken (also by a player not in this game): swap
+  app.seats[i] = s;
+  persist(); renderNames(); closeOverlay('pick');
 }
 function renderResume() {
   var g = app.game, box = $('resume');
@@ -1389,7 +1480,7 @@ function resetTurn() { turnGen++; busy = false; mover = null; ff = false; }
 function startNewGame(sameAsBefore) {
   var players = [];
   if (sameAsBefore && app.game) players = app.game.players.map(function (p) { return { name: p.name, seat: p.seat }; });
-  else for (var i = 0; i < app.count; i++) players.push({ name: (app.names[i] || '').trim() || ('Speler ' + (i + 1)), seat: i });
+  else for (var i = 0; i < app.count; i++) players.push({ name: (app.names[i] || '').trim() || ('Speler ' + (i + 1)), seat: app.seats[i] });
   var rule = sameAsBefore && app.game ? app.game.occupiedRule : app.rule;
   resetTurn();
   app.game = R.newGame({ players: players, occupiedRule: rule });
@@ -1407,7 +1498,7 @@ function showGame(fresh) {
   $('setup').hidden = true; $('game').hidden = false;
   var g = app.game;
   disp = g.players.map(function (p) { return p.pos; });
-  $('fx').innerHTML = '';
+  $('fx').innerHTML = ''; clearStage(false);
   buildPawns(); buildChips(); buildDice();
   boardKey = '';
   relayout();
@@ -1646,7 +1737,7 @@ function layoutPawns(animate) {
 /* ------------------------------------------------------------ effects: stamps, highlight, goose (transform/opacity only) */
 function fxOn() { return speed !== 0 && !ff && geo; }
 function anim(el, frames, ms) {
-  var d = Math.max(1, ms * (speed || 1));
+  var d = Math.max(1, ms * (speed || 1) * PACE);
   if (!el.animate) { setTimeout(function () { el.remove(); }, d); return; }
   var a = el.animate(frames, { duration: d, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'forwards' });
   a.onfinish = function () { el.remove(); };
@@ -1720,43 +1811,81 @@ function buildDice() {
 }
 function restT(v) { var r = REST[v] || REST[1]; return 'translate3d(0,0,0) rotateX(' + r[0] + 'deg) rotateY(' + r[1] + 'deg) rotateZ(0deg)'; }
 function setDice(a, b) { [a, b].forEach(function (v, i) { var cube = $('die-' + i).querySelector('.cube'); if (cube) cube.style.transform = restT(v || 1); }); }
+// The dice are thrown onto the middle of the board, like in the dobbelstenen app:
+// up into the air, tumbling, two bounces, then they lie still so everyone can read them.
+var DICE_MS = 1500;
+function realWait(ms, gen) {   // not shortened by fast-forward: the throw is always shown
+  return new Promise(function (res) {
+    var t0 = performance.now();
+    (function chk() { if (gen !== turnGen || performance.now() - t0 >= ms) res(); else setTimeout(chk, 30); })();
+  });
+}
+function clearStage(fade) {
+  var st = $('dicestage'); if (!st) return;
+  var kids = Array.prototype.slice.call(st.children);
+  if (!fade || !kids.length || !kids[0].animate || speed === 0) { st.innerHTML = ''; return; }
+  kids.forEach(function (k) {
+    var a = k.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(.6) translateY(30%)' }], { duration: 320, easing: 'ease-in', fill: 'forwards' });
+    a.onfinish = function () { k.remove(); };
+  });
+}
 async function rollDice(d, gen) {
   Snd.dice();
-  var ms = dur(reduceMotion ? 120 : 600), anims = [];
-  if (ms > 0 && !reduceMotion) {
-    [0, 1].forEach(function (i) {
-      var cube = $('die-' + i).querySelector('.cube'); if (!cube || !cube.animate) return;
-      var r = REST[d[i]], s = i ? 1 : -1, sx = (i ? 2 : 3) * 360, sy = (i ? 3 : 2) * 360;
-      var fx = r[0] + sx, fy = r[1] + sy;
-      anims.push(cube.animate([
-        { transform: 'translate3d(' + (s * 10 - 40) + 'px,-64px,40px) rotateX(' + (fx - 520) + 'deg) rotateY(' + (fy - 610) + 'deg) rotateZ(' + (s * 40) + 'deg)', easing: 'cubic-bezier(.4,0,.9,.6)' },
-        { transform: 'translate3d(' + (s * 4 - 14) + 'px,0px,0) rotateX(' + (fx - 180) + 'deg) rotateY(' + (fy - 220) + 'deg) rotateZ(' + (s * 14) + 'deg)', offset: 0.42, easing: 'cubic-bezier(.2,.6,.4,1)' },
-        { transform: 'translate3d(' + (s * 2 - 6) + 'px,-16px,0) rotateX(' + (fx - 60) + 'deg) rotateY(' + (fy - 70) + 'deg) rotateZ(' + (s * 6) + 'deg)', offset: 0.62, easing: 'cubic-bezier(.5,0,.8,.6)' },
-        { transform: 'translate3d(0px,0px,0) rotateX(' + (fx - 8) + 'deg) rotateY(' + (fy - 10) + 'deg) rotateZ(0deg)', offset: 0.82, easing: 'ease-out' },
-        { transform: 'translate3d(0px,0px,0) rotateX(' + fx + 'deg) rotateY(' + fy + 'deg) rotateZ(0deg)' }
-      ], { duration: ms, fill: 'forwards' }));
-    });
-    await wait(reduceMotion ? 120 : 600);
-    alive(gen);
-  } else if (ms > 0) { await wait(120); alive(gen); }
-  anims.forEach(function (a) { try { a.cancel(); } catch (e) {} });
+  var D = DICE_MS * speed, st = $('dicestage');
+  if (D <= 0 || !geo || !st || !document.body.animate) { setDice(d[0], d[1]); Snd.land(); return; }
+  st.innerHTML = '';
+  var size = Math.round(clamp(Math.min(geo.W, geo.H) * 0.2, 64, 132)), c = spot(LAST), gap = Math.round(size * 0.3);
+  var faces = '';
+  for (var v = 1; v <= 6; v++) faces += '<div class="face f' + v + '">' + pipsSVG(v) + '</div>';
+  [0, 1].forEach(function (i) {
+    var w = document.createElement('div'), s = i ? 1 : -1;
+    w.className = 'bigdie';
+    w.style.setProperty('--die', size + 'px');
+    w.style.left = Math.round(c[0] + (i ? gap / 2 : -gap / 2 - size)) + 'px';
+    w.style.top = Math.round(clamp(c[1] - size / 2, 8, geo.H - size - 8)) + 'px';
+    w.innerHTML = '<div class="shade"></div><div class="scene"><div class="die"><div class="tilt"><div class="cube">' + faces + '</div></div></div></div>';
+    st.appendChild(w);
+    var cube = w.querySelector('.cube'), scene = w.querySelector('.scene'), shade = w.querySelector('.shade');
+    var r = REST[d[i]] || REST[1];
+    var fx = r[0] + (3 + i) * 360, fy = r[1] + (3 - i) * 360, fz = s * 360;
+    var up = size * 1.35, below = geo.H - (parseFloat(w.style.top) || 0) + size * 0.2, side = s * size * 0.45;
+    cube.style.transform = 'rotateX(' + r[0] + 'deg) rotateY(' + r[1] + 'deg)';
+    cube.animate([
+      { transform: 'rotateX(0deg) rotateY(0deg) rotateZ(0deg)' },
+      { transform: 'rotateX(' + fx + 'deg) rotateY(' + fy + 'deg) rotateZ(' + fz + 'deg)' }
+    ], { duration: D, easing: 'cubic-bezier(.15,.6,.3,1)', fill: 'forwards' });
+    scene.animate([
+      { transform: 'translate(' + side * 1.6 + 'px,' + below + 'px) scale(.75)', opacity: 0, offset: 0 },
+      { transform: 'translate(' + side * 1.3 + 'px,' + below * 0.55 + 'px) scale(.85)', opacity: 1, offset: 0.08 },
+      { transform: 'translate(' + side + 'px,' + (-up) + 'px) scale(1)', opacity: 1, offset: 0.28, easing: 'ease-in' },
+      { transform: 'translate(' + side * 0.4 + 'px,0px) scale(1)', opacity: 1, offset: 0.5, easing: 'ease-out' },
+      { transform: 'translate(' + side * 0.2 + 'px,' + (-up * 0.28) + 'px) scale(1)', opacity: 1, offset: 0.64, easing: 'ease-in' },
+      { transform: 'translate(0px,0px) scale(1)', opacity: 1, offset: 0.78, easing: 'ease-out' },
+      { transform: 'translate(0px,' + (-up * 0.07) + 'px) scale(1)', opacity: 1, offset: 0.87, easing: 'ease-in' },
+      { transform: 'translate(0px,0px) scale(1)', opacity: 1, offset: 1 }
+    ], { duration: D, fill: 'forwards' });
+    shade.animate([
+      { transform: 'translateX(' + side * 1.6 + 'px) scale(.3)', opacity: 0, offset: 0 },
+      { transform: 'translateX(' + side + 'px) scale(.45)', opacity: 0.35, offset: 0.28 },
+      { transform: 'translateX(' + side * 0.4 + 'px) scale(1)', opacity: 1, offset: 0.5 },
+      { transform: 'translateX(' + side * 0.2 + 'px) scale(.8)', opacity: 0.75, offset: 0.64 },
+      { transform: 'translateX(0px) scale(1)', opacity: 1, offset: 0.78 },
+      { transform: 'translateX(0px) scale(1)', opacity: 1, offset: 1 }
+    ], { duration: D, fill: 'forwards' });
+  });
+  setTimeout(function () { if (st.children.length) Snd.land(); }, D * 0.5);
+  await realWait(D, gen);
+  alive(gen);
   setDice(d[0], d[1]);
   Snd.land();
 }
 
 /* ------------------------------------------------------------ movement */
 async function hop(i, path, opt, gen) {
-  if (reduceMotion) { // calmer: one short glide per walk instead of hopping square by square
-    var to = spot(path[path.length - 1]), f = pawnPos[i];
-    await tween(240, function (t) { var e = ease(t); place(i, lerp(f.x, to[0], e), lerp(f.y, to[1] + geo.tmin * 0.36, e), 1, true); });
-    alive(gen);
-    disp[i] = path[path.length - 1];
-    if (opt.bounce) { fxStamp(LAST, 'finish', 'Te ver!'); await wait(300); alive(gen); }
-    return;
-  }
-  var n = path.length, per = n <= 4 ? 112 : n <= 8 ? 94 : 78;
-  per *= opt.chain === 0 ? 1 : opt.chain === 1 ? 0.7 : 0.58;
-  var lift = geo.tmin * 0.42, foot = geo.tmin * 0.36;
+  // square by square, slow enough to count along (per step ~240 ms, a little quicker on long walks)
+  var n = path.length, per = n <= 6 ? 142 : n <= 9 ? 128 : 112;
+  per *= opt.chain === 0 ? 1 : opt.chain === 1 ? 0.85 : 0.75;
+  var lift = geo.tmin * (reduceMotion ? 0.22 : 0.42), foot = geo.tmin * 0.36;
   // one continuous walk per stretch (split only where the pawn turns around on the finish)
   var cut = -1;
   if (opt.bounce) for (var z = 0; z < n; z++) if (isFinish(path[z])) { cut = z; break; }
@@ -1782,7 +1911,7 @@ async function hop(i, path, opt, gen) {
 }
 async function fly(i, to, reason, gen) {
   var f = pawnPos[i], b = spot(to), foot = isFinish(to) ? 0 : geo.tmin * 0.36, d = Math.hypot(b[0] - f.x, b[1] + foot - f.y);
-  var h = reduceMotion ? 0 : Math.min(geo.H * 0.26, d * 0.4 + geo.tmin);
+  var h = Math.min(geo.H * 0.26, d * 0.4 + geo.tmin) * (reduceMotion ? 0.5 : 1);
   var ms = reason === 'dood' ? 620 : reason === 'bezet' ? 480 : 540;
   await tween(ms, function (t) {
     var e = ease(t), sc = reason === 'dood' ? 1 - 0.5 * Math.sin(Math.PI * e) : 1 + 0.4 * Math.sin(Math.PI * e);
@@ -1815,7 +1944,8 @@ async function playTurn(events, gen) {
         await rollDice(e.dice, gen);
         app.last = e.dice;
         sayN(p, '', ' gooit ' + e.total, e.dice[0] + ' en ' + e.dice[1] + '.');
-        await wait(70); alive(gen);
+        await wait(260); alive(gen);
+        clearStage(true);
         break;
       case 'deadlockRelease':
         special = true;
@@ -1900,7 +2030,7 @@ function numberWord(n) { return WORDS[n] || String(n); }
 
 async function primary() {
   Snd.unlock();
-  if (busy) { ff = true; return; }
+  if (busy) { if (performance.now() >= skipAfter) ff = true; return; }
   var g = app.game;
   if (!g || app.screen !== 'game') return;
   if (g.winner !== null) { showWin(); return; }
@@ -1910,6 +2040,7 @@ async function primary() {
   try { res = R.takeTurn(g, d1, d2); } catch (err) { syncUI(); return; }
   var gen = ++turnGen;
   busy = true; ff = false;
+  skipAfter = performance.now() + (can ? DICE_MS * speed + 300 : 0);   // a quick double tap must not skip the dice
   mover = g.current;
   app.game = res.state;
   if (can) { app.turns++; app.rolls[mover] = (app.rolls[mover] | 0) + 1; }
@@ -1996,7 +2127,7 @@ function confetti() {
 var lastFocus = null, usedKeys = false;
 document.addEventListener('keydown', function (e) { if (e.key === 'Tab' || e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') usedKeys = true; }, true);
 document.addEventListener('pointerdown', function () { usedKeys = false; }, true);
-var OVERLAYS = ['menu', 'rules', 'confirm', 'win'];
+var OVERLAYS = ['menu', 'rules', 'confirm', 'win', 'pick'];
 function openOverlay(id) {
   lastFocus = document.activeElement;
   $(id).hidden = false;
@@ -2048,6 +2179,8 @@ function wire() {
   });
   $('opt-bezet').addEventListener('change', function () { app.rule = $('opt-bezet').checked; persist(); });
   $('btn-start').addEventListener('click', function () { Snd.unlock(); startNewGame(false); });
+  $('btn-pick-close').addEventListener('click', function () { closeOverlay('pick'); });
+  $('pick-grid').addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('button[data-seat]'); if (b) choosePiece(+b.getAttribute('data-seat')); });
   $('btn-resume').addEventListener('click', function () { Snd.unlock(); showGame(false); });
   $('btn-rules-setup').addEventListener('click', function () { openOverlay('rules'); });
   $('btn-rules').addEventListener('click', function () { openOverlay('rules'); });
@@ -2061,7 +2194,7 @@ function wire() {
   $('btn-keep').addEventListener('click', function () { closeOverlay('confirm'); });
   $('btn-quit').addEventListener('click', quitGame);
   $('btn-roll').addEventListener('click', primary);
-  $('board').addEventListener('click', function () { if (busy) ff = true; });
+  $('board').addEventListener('click', function () { if (busy && performance.now() >= skipAfter) ff = true; });
   $('btn-sound').addEventListener('click', toggleSound);
   $('btn-again').addEventListener('click', function () { closeOverlay('win'); startNewGame(true); });
   $('btn-new').addEventListener('click', function () {
@@ -2117,7 +2250,7 @@ function start(data) {
   else if (hot && data.screen === 'game' && app.game) showGame(false);
   else showSetup();
 }
-window.claude?.hot?.snapshot(() => ({ app: { names: app.names, count: app.count, rule: app.rule, muted: app.muted, game: app.game, turns: app.turns, rolls: app.rolls, last: app.last, log: app.log }, screen: app.screen }));
+window.claude?.hot?.snapshot(() => ({ app: { names: app.names, seats: app.seats, count: app.count, rule: app.rule, muted: app.muted, game: app.game, turns: app.turns, rolls: app.rolls, last: app.last, log: app.log }, screen: app.screen }));
 window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
 })();
 </script>
