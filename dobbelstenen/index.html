@@ -92,6 +92,12 @@
   }
   .pip { width: 72%; aspect-ratio: 1; border-radius: 50%; background: var(--ink);
          box-shadow: inset 0 2px 3px rgba(0,0,0,.45); }
+  .oct-face {
+    position: absolute; left: 50%; top: 50%; transform-origin: 0 0;
+    backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  }
+  .oct-face svg { display: block; width: 100%; height: 100%; overflow: visible; }
+  .oct-face text { font-family: inherit; font-weight: 800; fill: #f4f7f2; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .options { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; justify-content: center; }
   .seg {
@@ -121,9 +127,10 @@
       <input type="radio" name="count" id="c2" value="2"><label for="c2">2 stenen</label>
     </fieldset>
     <fieldset class="seg">
-      <legend>Letters of cijfers</legend>
+      <legend>Soort dobbelsteen</legend>
       <input type="radio" name="mode" id="mL" value="letters"><label for="mL">A–F</label>
       <input type="radio" name="mode" id="mN" value="numbers" checked><label for="mN">1–6</label>
+      <input type="radio" name="mode" id="m8" value="d8"><label for="m8">1–8</label>
     </fieldset>
   </div>
 
@@ -167,6 +174,8 @@
 
   function renderFaces() {
     dice.forEach(d => {
+      d.cube.style.transform = ""; d.x = 0; d.y = 0; d.q = null;
+      if (mode === "d8") { renderOct(d); return; }
       d.cube.innerHTML = SETS[mode].map((sym, i) => mode === "numbers"
         ? `<div class="face pips ${FACE_CLASS[i]}" aria-label="${sym}">` +
           Array.from({length: 9}, (_, c) =>
@@ -191,6 +200,125 @@
     mode = r.value; renderFaces(); resetResults();
   }));
 
+  // ---------- 8-sided die (octahedron) ----------
+  // Face normals by sign pattern; opposite faces add up to 9 (1–8, 2–7, 3–6, 4–5)
+  const OCT = { 1:[1,1,1], 8:[-1,-1,-1], 2:[-1,1,-1], 7:[1,-1,1],
+                3:[1,1,-1], 6:[-1,-1,1], 4:[-1,1,1], 5:[1,-1,-1] };
+  const LIGHT = norm([-0.35, -0.6, 0.75]);           // from top-left, towards the viewer
+  const TILT = matMul(rotX(16), rotY(-12));          // slight tilt so it looks 3D at rest
+  const sub = (a,b) => a.map((v,i) => v - b[i]);
+  const add = (a,b) => a.map((v,i) => v + b[i]);
+  const mul = (a,k) => a.map(v => v * k);
+  const dot = (a,b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+  const cross = (a,b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+  function norm(a) { const l = Math.hypot(...a); return a.map(v => v / l); }
+  function rotX(deg) { const t = deg*Math.PI/180, c = Math.cos(t), s = Math.sin(t);
+    return [[1,0,0],[0,c,-s],[0,s,c]]; }
+  function rotY(deg) { const t = deg*Math.PI/180, c = Math.cos(t), s = Math.sin(t);
+    return [[c,0,s],[0,1,0],[-s,0,c]]; }
+  function matMul(A,B) { return A.map(r => [0,1,2].map(j => r[0]*B[0][j] + r[1]*B[1][j] + r[2]*B[2][j])); }
+  const matVec = (M,v) => M.map(r => dot(r, v));
+  const css3d = M => `matrix3d(${M[0][0]},${M[1][0]},${M[2][0]},0,${M[0][1]},${M[1][1]},${M[2][1]},0,${M[0][2]},${M[1][2]},${M[2][2]},0,0,0,0,1)`;
+
+  // Quaternions [w,x,y,z] for smooth tumbling between orientations
+  function matToQuat(m) {
+    const tr = m[0][0] + m[1][1] + m[2][2]; let w,x,y,z;
+    if (tr > 0) { const S = Math.sqrt(tr+1)*2; w = .25*S; x = (m[2][1]-m[1][2])/S; y = (m[0][2]-m[2][0])/S; z = (m[1][0]-m[0][1])/S; }
+    else if (m[0][0] > m[1][1] && m[0][0] > m[2][2]) { const S = Math.sqrt(1+m[0][0]-m[1][1]-m[2][2])*2; w = (m[2][1]-m[1][2])/S; x = .25*S; y = (m[0][1]+m[1][0])/S; z = (m[0][2]+m[2][0])/S; }
+    else if (m[1][1] > m[2][2]) { const S = Math.sqrt(1+m[1][1]-m[0][0]-m[2][2])*2; w = (m[0][2]-m[2][0])/S; x = (m[0][1]+m[1][0])/S; y = .25*S; z = (m[1][2]+m[2][1])/S; }
+    else { const S = Math.sqrt(1+m[2][2]-m[0][0]-m[1][1])*2; w = (m[1][0]-m[0][1])/S; x = (m[0][2]+m[2][0])/S; y = (m[1][2]+m[2][1])/S; z = .25*S; }
+    return [w,x,y,z];
+  }
+  function quatToMat([w,x,y,z]) {
+    return [[1-2*(y*y+z*z), 2*(x*y-z*w), 2*(x*z+y*w)],
+            [2*(x*y+z*w), 1-2*(x*x+z*z), 2*(y*z-x*w)],
+            [2*(x*z-y*w), 2*(y*z+x*w), 1-2*(x*x+y*y)]];
+  }
+  function quatMul(a,b) { return [
+    a[0]*b[0]-a[1]*b[1]-a[2]*b[2]-a[3]*b[3], a[0]*b[1]+a[1]*b[0]+a[2]*b[3]-a[3]*b[2],
+    a[0]*b[2]-a[1]*b[3]+a[2]*b[0]+a[3]*b[1], a[0]*b[3]+a[1]*b[2]-a[2]*b[1]+a[3]*b[0]]; }
+  function slerp(a,b,t) {
+    let d = a[0]*b[0]+a[1]*b[1]+a[2]*b[2]+a[3]*b[3];
+    if (d < 0) { b = b.map(v => -v); d = -d; }
+    if (d > .9995) return norm4(a.map((v,i) => v + (b[i]-v)*t));
+    const th = Math.acos(d), s = Math.sin(th);
+    return a.map((v,i) => v*Math.sin((1-t)*th)/s + b[i]*Math.sin(t*th)/s);
+  }
+  function norm4(q) { const l = Math.hypot(...q); return q.map(v => v / l); }
+  const axisAngle = (ax, ang) => [Math.cos(ang/2), ...ax.map(v => v*Math.sin(ang/2))];
+
+  // Build geometry for one face: matrix that places a flat triangle on the solid
+  function octGeometry(size) {
+    const r = size * 0.62, side = r * Math.SQRT2, h = side * Math.sqrt(3) / 2;
+    const faces = {};
+    for (const [num, [sx,sy,sz]] of Object.entries(OCT)) {
+      const n = norm([sx,sy,sz]);
+      const V0 = [0, sy*r, 0];                     // apex: the corner the number points to
+      let V1 = [sx*r, 0, 0], V2 = [0, 0, sz*r];
+      let ex = mul(sub(V2, V1), 1/side);
+      let ey = mul(sub(mul(add(V1, V2), .5), V0), 1/h);
+      if (dot(cross(ex, ey), n) < 0) {              // keep the front of each face outward
+        [V1, V2] = [V2, V1];
+        ex = mul(sub(V2, V1), 1/side);
+      }
+      const O = sub(V0, mul(ex, side/2));
+      const u = norm(sub(V0, mul(add(add(V0, V1), V2), 1/3)));   // "up" for the number
+      const align = matMul(TILT, [cross(n, u), mul(u, -1), n]);  // rotation that shows this face upright
+      faces[num] = {
+        n, side, h, q: matToQuat(align),
+        transform: `matrix3d(${ex},0,${ey},0,${n},0,${O},1)`
+      };
+    }
+    return faces;
+  }
+
+  function renderOct(d) {
+    const size = dice[0].slot.offsetWidth;
+    d.geo = octGeometry(size);
+    d.cube.innerHTML = Object.entries(d.geo).map(([num, f]) => {
+      const fs = f.side * .3, cy = f.h * 2/3;
+      const dotMark = num === "6"
+        ? `<circle cx="${f.side/2 + fs*.42}" cy="${cy + fs*.36}" r="${fs*.08}" fill="#f4f7f2"/>` : "";
+      return `<div class="oct-face" style="width:${f.side}px;height:${f.h}px;transform:${f.transform}">` +
+        `<svg viewBox="0 0 ${f.side} ${f.h}" aria-hidden="true">` +
+        `<polygon points="${f.side/2},0 ${f.side},${f.h} 0,${f.h}" stroke-width="1.5" stroke-linejoin="round"/>` +
+        `<text x="${f.side/2}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="${fs}">${num}</text>` +
+        dotMark + `</svg></div>`;
+    }).join("");
+    d.polys = [...d.cube.querySelectorAll("polygon")].map((p, i) => [p, Object.values(d.geo)[i].n]);
+    if (!d.q) d.q = d.geo[1].q;
+    setOct(d, d.q);
+  }
+
+  // Apply an orientation and shade each face by how much it faces the light
+  function setOct(d, q) {
+    const M = quatToMat(q);
+    d.cube.style.transform = css3d(M);
+    for (const [poly, n] of d.polys) {
+      const diff = Math.max(0, dot(matVec(M, n), LIGHT));
+      const col = `hsl(150, 58%, ${15 + 30 * diff}%)`;
+      poly.setAttribute("fill", col); poly.setAttribute("stroke", col);
+    }
+  }
+
+  function throwOct(d, num, idx) {
+    const q0 = d.q, q1 = d.geo[num].q;
+    const axis = norm([Math.random()-.5, Math.random()-.5, Math.random()-.5]);
+    const turns = (3 + rand6() % 2) * 2 * Math.PI;   // whole turns, so start and end stay continuous
+    const t0 = performance.now();
+    flight(d, idx);
+    (function frame(now) {
+      const t = Math.min(1, (now - t0) / DURATION);
+      const e = 1 - Math.pow(1 - t, 3);              // fast at first, slowing down as it lands
+      setOct(d, quatMul(axisAngle(axis, turns * (1 - e)), slerp(q0, q1, e)));
+      if (t < 1) requestAnimationFrame(frame);
+    })(t0);
+    d.q = q1;
+  }
+  function rand8() {
+    const b = new Uint8Array(1); crypto.getRandomValues(b); return b[0] % 8;   // 256 is a multiple of 8: no bias
+  }
+
   // Fair random integer 0..5 (no modulo bias)
   function rand6() {
     const b = new Uint8Array(1);
@@ -212,6 +340,16 @@
       { transform: rot(x1, y1, zTurns) }
     ], { duration: DURATION, easing: "cubic-bezier(.15,.6,.3,1)", fill: "forwards" });
 
+    flight(d, idx);
+    d.x = x1; d.y = y1;
+    tumble.onfinish = () => {
+      // Keep final position (z is a whole number of turns, so 0 looks identical)
+      d.cube.style.transform = rot(x1, y1, 0);
+      tumble.cancel();
+    };
+  }
+
+  function flight(d, idx) {
     // Flight: thrown up, lands, bounces twice
     const side = (idx === 0 ? -1 : 1) * (20 + rand6() * 4);
     d.scene.animate([
@@ -233,34 +371,43 @@
       { transform: "scale(1)", opacity: 1, offset: .76 },
       { transform: "scale(1)", opacity: 1, offset: 1 }
     ], { duration: DURATION });
-
-    d.x = x1; d.y = y1;
-    tumble.onfinish = () => {
-      // Keep final position (z is a whole number of turns, so 0 looks identical)
-      d.cube.style.transform = rot(x1, y1, 0);
-      tumble.cancel();
-    };
   }
 
   function roll() {
     if (busy) return;
-    busy = true; btn.disabled = true;
+    busy = true; btn.disabled = true; lockOptions(true);
     resultEl.textContent = "";
     const active = dice.slice(0, count);
-    const idx = active.map(() => rand6());
-    active.forEach((d, i) => throwDie(d, POS[idx[i]], i));
-    const syms = idx.map(i => SETS[mode][i]);
+    let syms;
+    if (mode === "d8") {
+      const nums = active.map(() => rand8() + 1);
+      active.forEach((d, i) => throwOct(d, nums[i], i));
+      syms = nums.map(String);
+    } else {
+      const idx = active.map(() => rand6());
+      active.forEach((d, i) => throwDie(d, POS[idx[i]], i));
+      syms = idx.map(i => SETS[mode][i]);
+    }
     setTimeout(() => {
       resultEl.textContent = "Gegooid: " + syms.join(" en ");
-      history.unshift(syms.join(mode === "numbers" ? "·" : ""));
+      history.unshift(syms.join(mode === "letters" ? "" : "·"));
       if (history.length > 10) history.pop();
       historyEl.textContent = history.length > 1
         ? "Vorige worpen: " + history.slice(1).join("   ") : " ";
-      busy = false; btn.disabled = false;
-    }, DURATION);
+      busy = false; btn.disabled = false; lockOptions(false);
+    }, DURATION + 30);
+  }
+  function lockOptions(on) {
+    document.querySelectorAll(".seg input").forEach(i => i.disabled = on);
   }
 
   renderFaces(); applyCount();
+  let lastSize = dice[0].slot.offsetWidth;
+  addEventListener("resize", () => {
+    const sz = dice[0].slot.offsetWidth;
+    if (sz !== lastSize && mode === "d8" && !busy) { lastSize = sz; dice.forEach(renderOct); }
+    lastSize = sz;
+  });
   btn.addEventListener("click", roll);
   tray.addEventListener("click", roll);
   tray.addEventListener("keydown", e => {
