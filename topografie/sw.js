@@ -1,6 +1,6 @@
 // Service worker: bewaart de app lokaal zodat hij ook zonder internet start.
 // Bij een nieuwe versie wordt CACHE opgehoogd; oude caches worden dan opgeruimd.
-const CACHE = 'topografie-v1';
+const CACHE = 'topografie-v2';
 const FILES = ["./", "index.html", "manifest.webmanifest", "apple-touch-icon.png", "icon-192.png", "icon-512.png", "fonts/fredoka-latin-500-normal.woff2", "fonts/fredoka-latin-600-normal.woff2", "fonts/fredoka-latin-700-normal.woff2"];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
