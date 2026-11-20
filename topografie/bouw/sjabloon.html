@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Topografie</title>
+<meta name="theme-color" content="#2b7bb9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f2d45" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Topografie">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<style>
+@font-face{font-family:"Fredoka";font-weight:500;font-display:swap;src:url("fonts/fredoka-latin-500-normal.woff2") format("woff2")}
+@font-face{font-family:"Fredoka";font-weight:600;font-display:swap;src:url("fonts/fredoka-latin-600-normal.woff2") format("woff2")}
+@font-face{font-family:"Fredoka";font-weight:700;font-display:swap;src:url("fonts/fredoka-latin-700-normal.woff2") format("woff2")}
+:root{
+  --lucht:#2b7bb9; --zee:#a8d8f2; --zee-lijn:#cfeafa; --land:#e7dfc3; --land-rand:#9c8f68;
+  --kaart:#fffdf6; --inkt:#16324a; --zacht:#5b7287; --knop:#ffffff; --knop-schaduw:#c9dbe8;
+  --goed:#3bb273; --fout:#e5533d; --doel:#ff9f1c; --ster:#ffc531;
+  --veilig-boven:env(safe-area-inset-top,0px); --veilig-onder:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root{
+  --lucht:#0f2d45; --zee:#1d4a6b; --zee-lijn:#28597d; --land:#c9c0a3; --land-rand:#5d553d;
+  --kaart:#13283a; --inkt:#eaf3fa; --zacht:#a5bccd; --knop:#1d3a52; --knop-schaduw:#0a1a28;
+}}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  font-family:"Fredoka",ui-rounded,system-ui,-apple-system,sans-serif;font-weight:500;
+  background:var(--lucht);color:var(--inkt);
+  padding:calc(var(--veilig-boven) + 10px) 12px calc(var(--veilig-onder) + 10px);
+  display:flex;flex-direction:column;-webkit-tap-highlight-color:transparent;
+  -webkit-user-select:none;user-select:none;overflow:hidden;
+}
+button{font:inherit;color:inherit;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.bord{flex:1;min-height:0;max-width:1100px;width:100%;margin:0 auto;background:var(--kaart);border-radius:22px;
+  box-shadow:0 6px 0 rgba(0,0,0,.18);display:flex;flex-direction:column;overflow:hidden}
+.kop{display:flex;align-items:center;gap:8px;padding:10px 12px 4px}
+.kop h1{flex:1;margin:0;font-size:22px;font-weight:700;letter-spacing:.2px}
+.rond{width:44px;height:44px;border-radius:50%;background:var(--zee-lijn);font-size:22px;display:grid;place-items:center;flex:none}
+.rond[hidden]{display:none}
+
+/* Startscherm */
+#start{flex:1;overflow:auto;padding:6px 16px 20px;display:flex;flex-direction:column;gap:14px}
+.les{display:flex;gap:14px;align-items:center;background:var(--zee-lijn);border-radius:18px;padding:12px 14px}
+.les svg{width:96px;flex:none}
+.les b{display:block;font-size:22px;font-weight:700}
+.les span{color:var(--zacht);font-size:16px}
+.modus{display:flex;align-items:center;gap:14px;text-align:left;background:var(--knop);border-radius:18px;padding:14px 16px;
+  box-shadow:0 4px 0 var(--knop-schaduw);font-size:20px;font-weight:600}
+.modus:active{transform:translateY(3px);box-shadow:0 1px 0 var(--knop-schaduw)}
+.modus i{font-style:normal;font-size:30px;width:40px;text-align:center}
+.modus small{display:block;font-size:15px;color:var(--zacht);font-weight:500}
+.modus .best{margin-left:auto;font-size:18px;letter-spacing:1px;white-space:nowrap}
+
+/* Spelscherm */
+#spel{flex:1;min-height:0;display:flex;flex-direction:column}
+#spel[hidden],#start[hidden]{display:none}
+.vraag{min-height:64px;padding:2px 16px 6px;text-align:center;display:flex;flex-direction:column;justify-content:center}
+.vraag .klein{font-size:16px;color:var(--zacht)}
+.vraag .groot{font-size:30px;font-weight:700;line-height:1.1}
+.vraag .weetje{font-size:17px;color:var(--zacht);max-width:34em;margin:2px auto 0}
+.kaartvak{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:0 6px}
+#kaart{width:100%;height:100%;max-height:100%;display:block;touch-action:manipulation}
+.bol{fill:var(--zee)}
+.raster{fill:none;stroke:var(--zee-lijn);stroke-width:1}
+.vang{fill:none;stroke:transparent;stroke-width:18;stroke-linejoin:round;pointer-events:stroke;cursor:pointer}
+.gebied{transform-box:fill-box;transform-origin:center;stroke:var(--land-rand);stroke-width:.8;stroke-linejoin:round;cursor:pointer;transition:fill .25s, opacity .25s}
+.neutraal .gebied{fill:var(--land)}
+.gebied.goed{fill:var(--goed)!important}
+.gebied.fout{fill:var(--fout)!important;animation:schud .4s}
+.gebied.doel{fill:var(--doel)!important;animation:knipper 1s infinite}
+.gebied.gedimd{opacity:.35}
+.gebied.gekozen{stroke:var(--inkt);stroke-width:2.2}
+.label{font-weight:700;fill:var(--inkt);text-anchor:middle;dominant-baseline:middle;pointer-events:none;
+  paint-order:stroke;stroke:var(--kaart);stroke-width:4px;stroke-linejoin:round;opacity:0;transition:opacity .25s}
+.label.zien{opacity:1}
+@keyframes knipper{50%{opacity:.45}}
+@keyframes schud{20%,60%{transform:translateX(-4px)}40%,80%{transform:translateX(4px)}}
+.draaitip{display:none;text-align:center;font-size:15px;color:var(--zacht);padding:2px 12px}
+@media (orientation:portrait) and (max-width:600px){.draaitip{display:block}}
+.knoppen{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:8px 14px 4px}
+.knoppen:empty{display:none}
+.knoppen button{background:var(--knop);border-radius:16px;padding:12px 8px;font-size:21px;font-weight:600;
+  box-shadow:0 4px 0 var(--knop-schaduw)}
+.knoppen button:active{transform:translateY(3px);box-shadow:0 1px 0 var(--knop-schaduw)}
+.knoppen button.goed{background:var(--goed);color:#fff}
+.knoppen button.fout{background:var(--fout);color:#fff;animation:schud .4s}
+.voet{display:flex;justify-content:center;gap:6px;padding:8px 12px 12px;flex-wrap:wrap;min-height:30px}
+.stip{width:14px;height:14px;border-radius:50%;background:var(--zee-lijn)}
+.stip.goed{background:var(--goed)}.stip.fout{background:var(--fout)}.stip.nu{outline:3px solid var(--doel);outline-offset:1px}
+.voet .tekstknop{background:var(--zee-lijn);border-radius:12px;padding:6px 14px;font-size:16px;font-weight:600}
+
+/* Eindscherm */
+.einde{position:fixed;inset:0;background:rgba(10,30,45,.55);display:grid;place-items:center;padding:20px;z-index:5}
+.einde[hidden]{display:none}
+.einde>div{background:var(--kaart);border-radius:24px;padding:24px 22px;text-align:center;max-width:360px;width:100%;
+  box-shadow:0 8px 0 rgba(0,0,0,.2);animation:plop .35s}
+.einde h2{margin:0 0 4px;font-size:30px}
+.einde .sterren{font-size:52px;letter-spacing:4px;margin:6px 0}
+.einde .sterren span{display:inline-block;animation:plop .4s backwards}
+.einde p{margin:6px 0 18px;font-size:19px;color:var(--zacht)}
+.einde .rij{display:flex;gap:10px}
+.einde .rij button{flex:1;border-radius:16px;padding:13px 6px;font-size:19px;font-weight:600;background:var(--zee-lijn)}
+.einde .rij button.hoofd{background:var(--goed);color:#fff}
+@keyframes plop{from{transform:scale(.6);opacity:0}}
+@media (orientation:landscape) and (max-height:500px){
+  .kop{padding-top:4px}.vraag{min-height:44px}.vraag .groot{font-size:24px}
+  .knoppen{grid-template-columns:repeat(4,1fr);padding-top:4px}.knoppen button{padding:8px 4px;font-size:18px}
+  .voet{padding:4px 12px 8px;min-height:22px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main class="bord">
+  <div class="kop">
+    <button class="rond" id="terug" aria-label="Terug" hidden>&larr;</button>
+    <h1 id="titel">Topografie</h1>
+    <button class="rond" id="geluid" aria-label="Geluid aan of uit">🔊</button>
+  </div>
+
+  <section id="start">
+    <div class="les">
+      <svg viewBox="0 0 1000 520" id="lesplaatje" aria-hidden="true"></svg>
+      <div><b>De werelddelen</b><span>Leer de 7 werelddelen kennen</span></div>
+    </div>
+    <button class="modus" data-modus="ontdek"><i>🔍</i><div>Ontdekken<small>Tik op de kaart en luister</small></div></button>
+    <button class="modus" data-modus="waar"><i>👆</i><div>Waar ligt…?<small>Tik het goede werelddeel aan</small></div><span class="best" id="best-waar"></span></button>
+    <button class="modus" data-modus="welk"><i>❓</i><div>Welk werelddeel?<small>Kies de goede naam</small></div><span class="best" id="best-welk"></span></button>
+  </section>
+
+  <section id="spel" hidden>
+    <div class="vraag" id="vraag"></div>
+    <div class="kaartvak"><svg id="kaart" viewBox="0 0 1000 520" role="img" aria-label="Wereldkaart"></svg></div>
+    <div class="draaitip">🔄 Draai je scherm voor een grotere kaart</div>
+    <div class="knoppen" id="knoppen"></div>
+    <div class="voet" id="voet"></div>
+  </section>
+</main>
+
+<div class="einde" id="einde" hidden><div>
+  <h2 id="einde-titel">Klaar!</h2>
+  <div class="sterren" id="einde-sterren"></div>
+  <p id="einde-tekst"></p>
+  <div class="rij"><button id="einde-menu">Menu</button><button class="hoofd" id="einde-nog">Nog een keer</button></div>
+</div></div>
+
+<script>
+'use strict';
+// Kaartdata (Natural Earth 1:110m, samengevoegd per werelddeel) wordt bij het bouwen ingevoegd.
+const KAART = __KAART__;
+
+// Een les is een set gebieden op een kaart. Nieuwe lessen (oceanen, landen, provincies)
+// kunnen later met dezelfde opbouw worden toegevoegd.
+const LES = {
+  id: 'werelddelen',
+  titel: 'De werelddelen',
+  gebieden: [
+    { id: 'NA', naam: 'Noord-Amerika', kleur: '#7cc160', weetje: 'Groenland, het grootste eiland ter wereld, hoort bij Noord-Amerika.' },
+    { id: 'SA', naam: 'Zuid-Amerika', kleur: '#3fae94', weetje: 'Hier ligt het Amazone-regenwoud, het grootste regenwoud ter wereld.' },
+    { id: 'EU', naam: 'Europa', kleur: '#f4c84a', weetje: 'Nederland ligt in Europa. Daar wonen wij!' },
+    { id: 'AF', naam: 'Afrika', kleur: '#d39b55', weetje: 'In Afrika ligt de Sahara, de grootste hete woestijn ter wereld.' },
+    { id: 'AS', naam: 'Azië', kleur: '#ec7357', weetje: 'Azië is het grootste werelddeel. Er wonen ook de meeste mensen.' },
+    { id: 'OC', naam: 'Oceanië', kleur: '#c77dba', weetje: 'Oceanië is het kleinste werelddeel. Australië is het grootste land ervan.' },
+    { id: 'AN', naam: 'Antarctica', kleur: '#f1f6fa', weetje: 'Antarctica is het koudste werelddeel. Er wonen pinguïns, maar geen mensen.' },
+  ],
+};
+
+const $ = id => document.getElementById(id);
+const NS = 'http://www.w3.org/2000/svg';
+const willekeurig = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const opslag = {
+  lees(k, std) { try { const v = localStorage.getItem('topografie.' + k); return v === null ? std : JSON.parse(v); } catch (e) { return std; } },
+  schrijf(k, v) { try { localStorage.setItem('topografie.' + k, JSON.stringify(v)); } catch (e) {} },
+};
+
+/* ---------- Geluid en spraak ---------- */
+let geluidAan = opslag.lees('geluid', true);
+let audio;
+function toon(freqs, duur = 0.12) {
+  if (!geluidAan) return;
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    freqs.forEach((f, i) => {
+      const o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime + i * duur;
+      o.type = 'triangle'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + duur * 1.6);
+      o.connect(g).connect(audio.destination); o.start(t); o.stop(t + duur * 1.8);
+    });
+  } catch (e) {}
+}
+const geluidGoed = () => toon([660, 880, 1175]);
+const geluidFout = () => toon([300, 220], 0.16);
+function zeg(tekst) {
+  if (!geluidAan || !('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(tekst);
+  u.lang = 'nl-NL'; u.rate = 0.92;
+  const stem = speechSynthesis.getVoices().find(v => /^nl[-_]NL/i.test(v.lang)) || speechSynthesis.getVoices().find(v => /^nl/i.test(v.lang));
+  if (stem) u.voice = stem;
+  speechSynthesis.speak(u);
+}
+if ('speechSynthesis' in window) speechSynthesis.getVoices();
+function toonGeluidKnop() { $('geluid').textContent = geluidAan ? '🔊' : '🔇'; }
+$('geluid').onclick = () => { geluidAan = !geluidAan; opslag.schrijf('geluid', geluidAan); if (!geluidAan && 'speechSynthesis' in window) speechSynthesis.cancel(); toonGeluidKnop(); };
+toonGeluidKnop();
+
+/* ---------- Kaart tekenen ---------- */
+const kaart = $('kaart');
+kaart.setAttribute('viewBox', `0 0 1000 ${KAART.hoogte}`);
+const el = (naam, attr = {}, ouder) => { const e = document.createElementNS(NS, naam); for (const k in attr) e.setAttribute(k, attr[k]); if (ouder) ouder.appendChild(e); return e; };
+el('path', { d: KAART.bol, class: 'bol' }, kaart);
+el('path', { d: KAART.raster, class: 'raster' }, kaart);
+const vangLaag = el('g', {}, kaart), landLaag = el('g', {}, kaart), labelLaag = el('g', {}, kaart);
+const vorm = {}, label = {};
+for (const g of LES.gebieden) {
+  const d = KAART[g.id].d;
+  // Brede onzichtbare rand: kleine eilanden en smalle stukken zijn zo makkelijker te raken.
+  el('path', { d, class: 'vang', 'data-id': g.id }, vangLaag);
+  vorm[g.id] = el('path', { d, class: 'gebied', 'data-id': g.id, fill: g.kleur, role: 'button', 'aria-label': g.naam }, landLaag);
+  label[g.id] = el('text', { x: KAART[g.id].label[0], y: KAART[g.id].label[1], class: 'label' }, labelLaag);
+  label[g.id].textContent = g.naam;
+}
+// Labels altijd ongeveer 17px groot, hoe breed het scherm ook is.
+function schaalLabels() {
+  const s = kaart.getBoundingClientRect().width / 1000 || 1;
+  const px = Math.max(16, Math.min(22, kaart.getBoundingClientRect().width / 30));
+  for (const t of Object.values(label)) { t.style.fontSize = (px / s) + 'px'; t.style.strokeWidth = (5 / s) + 'px'; }
+}
+new ResizeObserver(schaalLabels).observe(kaart);
+kaart.addEventListener('click', e => { const id = e.target.dataset && e.target.dataset.id; if (id && spel.opTik) spel.opTik(id); });
+
+// Klein plaatje op het startscherm
+(function () {
+  const p = $('lesplaatje'); p.setAttribute('viewBox', `0 0 1000 ${KAART.hoogte}`);
+  el('path', { d: KAART.bol, class: 'bol' }, p);
+  for (const g of LES.gebieden) el('path', { d: KAART[g.id].d, fill: g.kleur, stroke: 'rgba(0,0,0,.25)', 'stroke-width': 2 }, p);
+})();
+
+/* ---------- Schermen ---------- */
+const naamVan = id => LES.gebieden.find(g => g.id === id).naam;
+const weetjeVan = id => LES.gebieden.find(g => g.id === id).weetje;
+let spel = {};
+
+function zetKaart({ kleur = false } = {}) {
+  kaart.classList.toggle('neutraal', !kleur);
+  for (const id in vorm) { vorm[id].setAttribute('class', 'gebied'); label[id].classList.remove('zien'); }
+}
+function toonStart() {
+  spel = {};
+  $('spel').hidden = true; $('start').hidden = false; $('terug').hidden = true; $('einde').hidden = true;
+  $('titel').textContent = 'Topografie';
+  for (const m of ['waar', 'welk']) {
+    const b = opslag.lees(`best.${LES.id}.${m}`, 0);
+    $('best-' + m).textContent = b ? '⭐'.repeat(b) : '';
+  }
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+}
+function toonSpel(titel) {
+  $('start').hidden = true; $('spel').hidden = false; $('terug').hidden = false; $('einde').hidden = true;
+  $('titel').textContent = titel; $('knoppen').innerHTML = ''; $('voet').innerHTML = '';
+  requestAnimationFrame(schaalLabels);
+}
+$('terug').onclick = toonStart;
+document.querySelectorAll('.modus').forEach(b => b.onclick = () => ({ ontdek: startOntdek, waar: () => startQuiz('waar'), welk: () => startQuiz('welk') })[b.dataset.modus]());
+$('einde-menu').onclick = toonStart;
+$('einde-nog').onclick = () => startQuiz(spel.modus);
+
+function zetVraag(klein, groot, weetje) {
+  const v = $('vraag'); v.innerHTML = '';
+  for (const [cls, t] of [['klein', klein], ['groot', groot], ['weetje', weetje]]) {
+    if (!t) continue; const d = document.createElement('div'); d.className = cls; d.textContent = t; v.appendChild(d);
+  }
+}
+
+/* Ontdekken: tik een werelddeel, hoor de naam en een weetje. */
+function startOntdek() {
+  toonSpel('Ontdekken'); zetKaart({ kleur: true });
+  zetVraag('', 'Tik op een werelddeel', '');
+  let allesZien = false;
+  const knop = document.createElement('button'); knop.className = 'tekstknop'; knop.textContent = 'Alle namen tonen';
+  knop.onclick = () => { allesZien = !allesZien; knop.textContent = allesZien ? 'Namen verbergen' : 'Alle namen tonen'; for (const id in label) label[id].classList.toggle('zien', allesZien || vorm[id].classList.contains('gekozen')); };
+  $('voet').appendChild(knop);
+  spel = {
+    modus: 'ontdek',
+    opTik(id) {
+      for (const k in vorm) { vorm[k].classList.toggle('gekozen', k === id); label[k].classList.toggle('zien', allesZien || k === id); }
+      zetVraag('', naamVan(id), weetjeVan(id));
+      zeg(naamVan(id) + '. ' + weetjeVan(id));
+    },
+  };
+}
+
+/* Quiz: alle 7 werelddelen in willekeurige volgorde. Een fout beantwoord werelddeel
+   komt later in de ronde nog een keer terug (maximaal 5 extra vragen). */
+function startQuiz(modus) {
+  toonSpel(modus === 'waar' ? 'Waar ligt…?' : 'Welk werelddeel?');
+  zetKaart({ kleur: false });
+  const rij = willekeurig(LES.gebieden.map(g => g.id));
+  spel = { modus, rij, nr: 0, extra: 0, goedInEens: new Set(), fouteIds: new Set(), uitslag: [], bezig: false };
+  volgendeVraag();
+}
+function tekenStippen() {
+  const v = $('voet'); v.innerHTML = '';
+  spel.rij.forEach((_, i) => { const s = document.createElement('span'); s.className = 'stip' + (spel.uitslag[i] ? ' ' + spel.uitslag[i] : '') + (i === spel.nr ? ' nu' : ''); v.appendChild(s); });
+}
+function volgendeVraag() {
+  if (spel.nr >= spel.rij.length) return einde();
+  const doel = spel.rij[spel.nr];
+  spel.doel = doel; spel.pogingen = 0; spel.bezig = false;
+  zetKaart({ kleur: false }); tekenStippen(); $('knoppen').innerHTML = '';
+  if (spel.modus === 'waar') {
+    zetVraag('Waar ligt', naamVan(doel) + '?', '');
+    zeg('Waar ligt ' + naamVan(doel) + '?');
+    spel.opTik = tikWaar;
+  } else {
+    for (const id in vorm) if (id !== doel) vorm[id].classList.add('gedimd');
+    vorm[doel].classList.add('doel');
+    zetVraag('', 'Welk werelddeel is oranje?', '');
+    zeg('Welk werelddeel is oranje?');
+    spel.opTik = null;
+    const keuzes = willekeurig([doel, ...willekeurig(LES.gebieden.map(g => g.id).filter(i => i !== doel)).slice(0, 3)]);
+    for (const id of keuzes) {
+      const b = document.createElement('button'); b.textContent = naamVan(id); b.dataset.id = id;
+      b.onclick = () => tikWelk(id, b); $('knoppen').appendChild(b);
+    }
+  }
+}
+function vastleggen(goed) {
+  const doel = spel.doel;
+  spel.uitslag[spel.nr] = goed ? 'goed' : 'fout';
+  if (goed && !spel.fouteIds.has(doel)) spel.goedInEens.add(doel);
+  if (!goed) {
+    spel.fouteIds.add(doel);
+    if (spel.extra < 5) { spel.extra++; spel.rij.splice(Math.min(spel.rij.length, spel.nr + 3), 0, doel); }
+  }
+}
+function tikWaar(id) {
+  if (spel.bezig) return;
+  const doel = spel.doel;
+  if (id === doel) {
+    spel.bezig = true; vastleggen(spel.pogingen === 0);
+    vorm[id].classList.add('goed'); label[id].classList.add('zien'); geluidGoed();
+    zetVraag('', 'Goed zo!', naamVan(id)); zeg('Goed zo!');
+    tekenStippen(); setTimeout(() => { spel.nr++; volgendeVraag(); }, 1300);
+    return;
+  }
+  spel.pogingen++; geluidFout();
+  vorm[id].classList.remove('fout'); void vorm[id].getBBox(); vorm[id].classList.add('fout');
+  label[id].classList.add('zien');
+  setTimeout(() => { vorm[id].classList.remove('fout'); label[id].classList.remove('zien'); }, 1100);
+  if (spel.pogingen >= 2) {
+    // Na twee keer mis: laat zien waar het is, en ga door.
+    spel.bezig = true; vastleggen(false);
+    vorm[doel].classList.add('doel'); label[doel].classList.add('zien');
+    zetVraag('Kijk, hier ligt', naamVan(doel), ''); zeg('Kijk, hier ligt ' + naamVan(doel));
+    tekenStippen(); setTimeout(() => { spel.nr++; volgendeVraag(); }, 2400);
+  } else {
+    zetVraag('Dat is ' + naamVan(id) + '. Probeer nog eens:', naamVan(doel) + '?', '');
+    zeg('Dat is ' + naamVan(id) + '. Probeer nog eens.');
+  }
+}
+function tikWelk(id, knop) {
+  if (spel.bezig) return;
+  const doel = spel.doel;
+  if (id === doel) {
+    spel.bezig = true; vastleggen(spel.pogingen === 0);
+    knop.classList.add('goed'); vorm[doel].classList.remove('doel'); vorm[doel].classList.add('goed'); label[doel].classList.add('zien');
+    geluidGoed(); zetVraag('', 'Goed zo!', ''); zeg('Goed zo! ' + naamVan(doel));
+    tekenStippen(); setTimeout(() => { spel.nr++; volgendeVraag(); }, 1300);
+    return;
+  }
+  spel.pogingen++; geluidFout(); knop.classList.add('fout'); knop.disabled = true;
+  zeg('Nee, dat is het niet.');
+  if (spel.pogingen >= 2) {
+    spel.bezig = true; vastleggen(false);
+    const goedeKnop = [...$('knoppen').children].find(b => b.dataset.id === doel); goedeKnop.classList.add('goed');
+    label[doel].classList.add('zien'); zetVraag('Dit is', naamVan(doel), ''); zeg('Dit is ' + naamVan(doel));
+    tekenStippen(); setTimeout(() => { spel.nr++; volgendeVraag(); }, 2400);
+  }
+}
+function einde() {
+  spel.opTik = null;
+  const n = spel.goedInEens.size, totaal = LES.gebieden.length;
+  const sterren = n === totaal ? 3 : n >= totaal - 2 ? 2 : 1;
+  const sleutel = `best.${LES.id}.${spel.modus}`;
+  if (sterren > opslag.lees(sleutel, 0)) opslag.schrijf(sleutel, sterren);
+  $('einde-titel').textContent = sterren === 3 ? 'Super!' : sterren === 2 ? 'Goed gedaan!' : 'Knap geoefend!';
+  $('einde-sterren').innerHTML = '';
+  for (let i = 0; i < 3; i++) { const s = document.createElement('span'); s.textContent = i < sterren ? '⭐' : '☆'; s.style.animationDelay = (0.15 + i * 0.2) + 's'; $('einde-sterren').appendChild(s); }
+  $('einde-tekst').textContent = `${n} van de ${totaal} werelddelen in één keer goed.`;
+  $('einde').hidden = false;
+  toon([523, 659, 784, 1047], 0.13);
+  zeg($('einde-titel').textContent + ' ' + $('einde-tekst').textContent);
+}
+
+toonStart();
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+</script>
+</body>
+</html>

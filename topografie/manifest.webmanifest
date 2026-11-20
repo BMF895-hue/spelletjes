@@ -1,0 +1,16 @@
+{
+  "name": "Topografie",
+  "short_name": "Topografie",
+  "lang": "nl",
+  "start_url": "./",
+  "scope": "./",
+  "id": "./?app=topografie",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#2b7bb9",
+  "theme_color": "#2b7bb9",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
